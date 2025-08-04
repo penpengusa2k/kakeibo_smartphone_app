@@ -1,48 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // providerパッケージをインポート
-import 'package:kakeibo_smartphone_app/screens/home_page.dart';
+import 'package:provider/provider.dart';
 import 'package:kakeibo_smartphone_app/screens/calendar_page.dart';
 import 'package:kakeibo_smartphone_app/screens/analytics_page.dart';
-import 'package:kakeibo_smartphone_app/viewmodels/transaction_viewmodel.dart'; // TransactionViewModelをインポート
+import 'package:kakeibo_smartphone_app/screens/settings_page.dart';
+import 'package:kakeibo_smartphone_app/viewmodels/transaction_viewmodel.dart';
+import 'package:kakeibo_smartphone_app/viewmodels/settings_viewmodel.dart';
+import 'package:kakeibo_smartphone_app/services/database_helper.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await DatabaseHelper.instance.database; // データベースの初期化
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => TransactionViewModel()),
+        ChangeNotifierProvider(create: (_) => SettingsViewModel()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // MaterialAppをChangeNotifierProviderでラップする
-    return ChangeNotifierProvider(
-      create: (context) => TransactionViewModel(), // ここでTransactionViewModelを提供
-      child: MaterialApp(
-        title: '家計簿アプリ',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-          useMaterial3: true,
-        ),
-        home: const MainScreen(),
-      ),
-    );
-  }
+  State<MyApp> createState() => _MyAppState();
 }
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
-
-  @override
-  State<MainScreen> createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
+class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
 
-  final List<Widget> _widgetOptions = <Widget>[
-    const HomePage(),
-    const CalendarPage(),
-    const AnalyticsPage(),
+  static const List<Widget> _widgetOptions = <Widget>[
+    CalendarPage(),
+    AnalyticsPage(),
+    SettingsPage(),
   ];
 
   void _onItemTapped(int index) {
@@ -53,28 +46,33 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
+    return MaterialApp(
+      title: '家計簿アプリ',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.edit),
-            label: '入力',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'カレンダー',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: '分析',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blueAccent,
-        onTap: _onItemTapped,
+      home: Scaffold(
+        body: _widgetOptions.elementAt(_selectedIndex),
+        bottomNavigationBar: BottomNavigationBar(
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_today),
+              label: 'カレンダー',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: '分析',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: '設定',
+            ),
+          ],
+          currentIndex: _selectedIndex,
+          selectedItemColor: Colors.blue,
+          onTap: _onItemTapped,
+        ),
       ),
     );
   }
