@@ -270,7 +270,7 @@ showModalBottomSheet(
     onSave: (newTransaction) async {
       await transactionViewModel.addTransaction(newTransaction);
       _updateSelectedDayTransactions();
-      Navigator.pop(context); // モーダルを閉じる
+      
     },
   ),
 );

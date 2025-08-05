@@ -179,15 +179,15 @@ class _QuickInputModalState extends State<QuickInputModal> {
     ];
     final isTagInDropdown = dropdownTags.any((tag) => tag.name == _selectedTag);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 1.0, // 画面全体に拡張できるように変更
-      expand: false,
-      builder: (context, scrollController) {
-        return ScaffoldMessenger(
-          key: _scaffoldMessengerKey,
-          child: Scaffold(
+    return ScaffoldMessenger(
+      key: _scaffoldMessengerKey,
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 1.0, // 画面全体に拡張できるように変更
+        expand: false,
+        builder: (context, scrollController) {
+          return Scaffold(
             backgroundColor: Colors.transparent,
             resizeToAvoidBottomInset: false,
             body: Container(
@@ -429,9 +429,9 @@ class _QuickInputModalState extends State<QuickInputModal> {
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
