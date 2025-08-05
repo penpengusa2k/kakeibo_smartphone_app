@@ -5,10 +5,11 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:kakeibo_smartphone_app/viewmodels/transaction_viewmodel.dart';
 import 'package:kakeibo_smartphone_app/models/transaction.dart';
 import 'package:kakeibo_smartphone_app/utils/formatter.dart';
-import 'package:csv/csv.dart';
+import 'package:kakeibo_smartphone_app/screens/tag_detail_page.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'package:csv/csv.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -18,67 +19,30 @@ class AnalyticsPage extends StatefulWidget {
 }
 
 class _AnalyticsPageState extends State<AnalyticsPage> {
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
-  DateTime _endDate = DateTime.now();
-  String _selectedPeriod = '今月';
-  List<String> _selectedTags = [];
+  DateTime _focusedMonth = DateTime.now();
+  String _selectedTransactionType = 'expense'; // 'income' or 'expense'
+  
 
   @override
   void initState() {
     super.initState();
-    _setPeriodToCurrentMonth();
   }
 
-  void _setPeriodToCurrentMonth() {
-    final now = DateTime.now();
+  void _changeMonth(int months) {
     setState(() {
-      _startDate = DateTime(now.year, now.month, 1);
-      _endDate = DateTime(now.year, now.month + 1, 0); // 今月の最終日
-      _selectedPeriod = '今月';
+      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + months, 1);
     });
-  }
-
-  void _setPeriodToLastMonth() {
-    final now = DateTime.now();
-    setState(() {
-      _startDate = DateTime(now.year, now.month - 1, 1);
-      _endDate = DateTime(now.year, now.month, 0); // 先月の最終日
-      _selectedPeriod = '先月';
-    });
-  }
-
-  void _setPeriodToCurrentYear() {
-    final now = DateTime.now();
-    setState(() {
-      _startDate = DateTime(now.year, 1, 1);
-      _endDate = DateTime(now.year, 12, 31);
-      _selectedPeriod = '今年';
-    });
-  }
-
-  Future<void> _selectCustomPeriod() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
-    );
-    if (picked != null) {
-      setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
-        _selectedPeriod = 'カスタム';
-      });
-    }
   }
 
   List<Transaction> _getFilteredTransactions(List<Transaction> allTransactions) {
     return allTransactions.where((t) {
       final transactionDate = t.date;
-      final isInPeriod = transactionDate.isAfter(_startDate.subtract(const Duration(days: 1))) &&
-          transactionDate.isBefore(_endDate.add(const Duration(days: 1)));
-      final isTagSelected = _selectedTags.isEmpty || _selectedTags.contains(t.tag);
-      return isInPeriod && isTagSelected;
+      final startOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+      final endOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
+      final isInPeriod = transactionDate.isAfter(startOfMonth.subtract(const Duration(days: 1))) &&
+          transactionDate.isBefore(endOfMonth.add(const Duration(days: 1)));
+      final isTypeSelected = t.type == _selectedTransactionType;
+      return isInPeriod && isTypeSelected;
     }).toList();
   }
 
@@ -123,17 +87,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     int balance = totalIncome - totalExpense;
 
     // カテゴリ別グラフデータ
-    Map<String, double> expenseByCategory = {};
-    for (var t in filteredTransactions.where((t) => t.type == 'expense')) {
-      expenseByCategory[t.tag] = (expenseByCategory[t.tag] ?? 0) + t.amount;
+    Map<String, double> dataByCategory = {};
+    for (var t in filteredTransactions) {
+      dataByCategory[t.tag] = (dataByCategory[t.tag] ?? 0) + t.amount;
     }
 
     List<PieChartSectionData> pieChartSections = [];
-    if (expenseByCategory.isNotEmpty) {
-      expenseByCategory.forEach((tag, amount) {
+    if (dataByCategory.isNotEmpty) {
+      dataByCategory.forEach((tag, amount) {
         pieChartSections.add(
           PieChartSectionData(
-            color: Colors.primaries[expenseByCategory.keys.toList().indexOf(tag) % Colors.primaries.length],
+            color: Colors.primaries[dataByCategory.keys.toList().indexOf(tag) % Colors.primaries.length],
             value: amount,
             title: '${Formatter.formatAmount(amount.toInt())}',
             radius: 50,
@@ -143,33 +107,51 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       });
     }
 
-    // 支出トレンドグラフデータ (簡易版: 日ごとの棒グラフ)
-    Map<DateTime, int> dailyExpense = {};
-    for (var t in filteredTransactions.where((t) => t.type == 'expense')) {
-      final date = DateTime(t.date.year, t.date.month, t.date.day);
-      dailyExpense[date] = (dailyExpense[date] ?? 0) + t.amount;
+    // 月別トレンドグラフデータ
+    Map<String, Map<String, int>> monthlyData = {}; // { 'YYYY-MM': { 'income': amount, 'expense': amount } }
+    final now = DateTime.now();
+    for (int i = 0; i < 6; i++) { // 過去6ヶ月分のデータを取得
+      final month = DateTime(now.year, now.month - i, 1);
+      final monthKey = DateFormat('yyyy-MM').format(month);
+      monthlyData[monthKey] = {'income': 0, 'expense': 0};
     }
 
-    List<BarChartGroupData> barChartGroups = [];
-    List<FlSpot> lineChartSpots = []; // 折れ線グラフ用
-    List<DateTime> sortedDates = dailyExpense.keys.toList()..sort();
+    for (var t in transactionViewModel.transactions) {
+      final monthKey = DateFormat('yyyy-MM').format(t.date);
+      if (monthlyData.containsKey(monthKey)) {
+        if (t.type == 'income') {
+          monthlyData[monthKey]!['income'] = monthlyData[monthKey]!['income']! + t.amount;
+        } else {
+          monthlyData[monthKey]!['expense'] = monthlyData[monthKey]!['expense']! + t.amount;
+        }
+      }
+    }
 
-    for (int i = 0; i < sortedDates.length; i++) {
-      final date = sortedDates[i];
-      final amount = dailyExpense[date]!;
-      barChartGroups.add(
+    List<BarChartGroupData> monthlyBarGroups = [];
+    List<String> sortedMonthKeys = monthlyData.keys.toList()..sort();
+
+    for (int i = 0; i < sortedMonthKeys.length; i++) {
+      final monthKey = sortedMonthKeys[i];
+      final data = monthlyData[monthKey]!;
+      monthlyBarGroups.add(
         BarChartGroupData(
           x: i,
           barRods: [
             BarChartRodData(
-              toY: amount.toDouble(),
+              toY: data['income']!.toDouble(),
+              color: Colors.green,
+              width: 8,
+              borderRadius: BorderRadius.zero,
+            ),
+            BarChartRodData(
+              toY: data['expense']!.toDouble(),
               color: Colors.red,
-              width: 10,
+              width: 8,
+              borderRadius: BorderRadius.zero,
             ),
           ],
         ),
       );
-      lineChartSpots.add(FlSpot(i.toDouble(), amount.toDouble()));
     }
 
     return Scaffold(
@@ -188,44 +170,52 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 期間選択
+              // 期間選択とタイプ選択
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  ElevatedButton(
-                    onPressed: _setPeriodToCurrentMonth,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _selectedPeriod == '今月' ? Colors.blue : null,
-                    ),
-                    child: const Text('今月'),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios),
+                    onPressed: () => _changeMonth(-1),
                   ),
-                  ElevatedButton(
-                    onPressed: _setPeriodToLastMonth,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _selectedPeriod == '先月' ? Colors.blue : null,
-                    ),
-                    child: const Text('先月'),
+                  Text(
+                    DateFormat('yyyy年MM月').format(_focusedMonth),
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  ElevatedButton(
-                    onPressed: _setPeriodToCurrentYear,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _selectedPeriod == '今年' ? Colors.blue : null,
-                    ),
-                    child: const Text('今年'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _selectCustomPeriod,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _selectedPeriod == 'カスタム' ? Colors.blue : null,
-                    ),
-                    child: const Text('カスタム'),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios),
+                    onPressed: () => _changeMonth(1),
                   ),
                 ],
               ),
               const SizedBox(height: 16.0),
-              Text(
-                '期間: ${DateFormat('yyyy/MM/dd').format(_startDate)} - ${DateFormat('yyyy/MM/dd').format(_endDate)}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedTransactionType = 'income';
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _selectedTransactionType == 'income' ? Colors.green : null,
+                    ),
+                    child: const Text('収入'),
+                  ),
+                  const SizedBox(width: 16.0),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedTransactionType = 'expense';
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _selectedTransactionType == 'expense' ? Colors.red : null,
+                    ),
+                    child: const Text('支出'),
+                  ),
+                ],
               ),
               const SizedBox(height: 16.0),
 
@@ -234,11 +224,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildSummaryItem('収入', totalIncome, Colors.green),
-                      _buildSummaryItem('支出', totalExpense, Colors.red),
-                      _buildSummaryItem('収支', balance, Colors.blue),
+                      if (_selectedTransactionType == 'income')
+                        _buildSummaryItem('収入', totalIncome, Colors.green)
+                      else
+                        _buildSummaryItem('支出', totalExpense, Colors.red),
                     ],
                   ),
                 ),
@@ -252,7 +243,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('カテゴリ別支出', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                        'カテゴリ別${_selectedTransactionType == 'income' ? '収入' : '支出'}',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
                       const SizedBox(height: 16.0),
                       SizedBox(
                         height: 200,
@@ -265,25 +259,50 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         ),
                       ),
                       const SizedBox(height: 16.0),
-                      // タグフィルタ
-                      Wrap(
-                        spacing: 8.0,
-                        children: transactionViewModel.tags.where((tag) => tag.type == 'expense').map((tag) {
-                          final isSelected = _selectedTags.contains(tag.name);
-                          return FilterChip(
-                            label: Text(tag.name),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  _selectedTags.add(tag.name);
-                                } else {
-                                  _selectedTags.remove(tag.name);
-                                }
-                              });
-                            },
+                      Text(
+                        '合計: ${Formatter.formatAmount(_selectedTransactionType == 'income' ? totalIncome : totalExpense)}円',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8.0),
+                      // タグごとの内訳リスト
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: dataByCategory.keys.length,
+                        itemBuilder: (context, index) {
+                          final tag = dataByCategory.keys.elementAt(index);
+                          final amount = dataByCategory[tag]!;
+                          final total = (_selectedTransactionType == 'income' ? totalIncome : totalExpense);
+                          final percentage = total > 0 ? (amount / total * 100) : 0.0;
+                          String percentageText;
+                          if (percentage > 0 && percentage < 0.1) {
+                            percentageText = '<0.1';
+                          } else {
+                            percentageText = percentage.toStringAsFixed(1);
+                          }
+                          final tagTransactions = filteredTransactions.where((t) => t.tag == tag).toList();
+
+                          return Column(
+                            children: [
+                              ListTile(
+                                title: Text('$tag ($percentageText%)'),
+                                trailing: Text('${Formatter.formatAmount(amount.toInt())}円'),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => TagDetailPage(
+                                        tagName: tag,
+                                        transactions: transactionViewModel.transactions.where((t) => t.tag == tag && t.type == _selectedTransactionType).toList(),
+                                        initialFocusedMonth: _focusedMonth,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           );
-                        }).toList(),
+                        },
                       ),
                     ],
                   ),
@@ -291,32 +310,32 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               ),
               const SizedBox(height: 16.0),
 
-              // 支出トレンドグラフ
+              // 月別トレンドグラフ
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('支出トレンド', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text('月別収入・支出トレンド', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16.0),
                       SizedBox(
                         height: 200,
                         child: BarChart(
                           BarChartData(
-                            barGroups: barChartGroups,
+                            barGroups: monthlyBarGroups,
                             titlesData: FlTitlesData(
                               leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                               bottomTitles: AxisTitles(
                                 sideTitles: SideTitles(
                                   showTitles: true,
                                   getTitlesWidget: (value, meta) {
-                                    if (value.toInt() < sortedDates.length) {
-                                      return Text(DateFormat('MM/dd').format(sortedDates[value.toInt()]));
+                                    if (value.toInt() < sortedMonthKeys.length) {
+                                      return Text(DateFormat('yy/MM').format(DateTime.parse('${sortedMonthKeys[value.toInt()]}-01')));
                                     }
                                     return const Text('');
                                   },
-                                  interval: (sortedDates.isEmpty ? 1 : (sortedDates.length / 5).ceilToDouble()), // 5つ程度のラベルを表示 (最低1)
+                                  interval: 1,
                                 ),
                               ),
                             ),
