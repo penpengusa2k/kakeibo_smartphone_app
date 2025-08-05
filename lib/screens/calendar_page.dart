@@ -229,26 +229,16 @@ class _CalendarPageState extends State<CalendarPage> {
                                 backgroundColor: Colors.transparent,
                                 useSafeArea: true,
                                 enableDrag: false,
-                                builder: (context) => Stack(
-                                  children: [
-                                    Positioned(
-                                      top: 24,
-                                      left: 0,
-                                      right: 0,
-                                      bottom: 0,
-                                      child: Material(
-                                        color: Theme.of(context).scaffoldBackgroundColor,
-                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                                        child: QuickInputModal(
-                                          initialTransaction: transaction,
-                                          onSave: (updatedTransaction) async {
-                                            await transactionViewModel.updateTransaction(updatedTransaction);
-                                            _updateSelectedDayTransactions();
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                builder: (context) => Material(
+                                  color: Theme.of(context).scaffoldBackgroundColor,
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                                  child: QuickInputModal(
+                                    initialTransaction: transaction,
+                                    onSave: (updatedTransaction) async {
+                                      await transactionViewModel.updateTransaction(updatedTransaction);
+                                      _updateSelectedDayTransactions();
+                                    },
+                                  ),
                                 ),
                               );
                             },
