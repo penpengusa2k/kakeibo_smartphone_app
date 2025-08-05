@@ -86,6 +86,16 @@ class _QuickInputModalState extends State<QuickInputModal> {
     });
   }
 
+  void _onBackspacePressed() {
+    setState(() {
+      if (_amountString.length > 1) {
+        _amountString = _amountString.substring(0, _amountString.length - 1);
+      } else {
+        _amountString = '0';
+      }
+    });
+  }
+
   void _onClearPressed() {
     setState(() {
       _amountString = '0';
@@ -245,25 +255,48 @@ class _QuickInputModalState extends State<QuickInputModal> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ToggleButtons(
-                      isSelected: [
-                        _transactionType == 'expense',
-                        _transactionType == 'income'
-                      ],
-                      onPressed: (index) {
-                        setState(() {
-                          _transactionType = index == 0 ? 'expense' : 'income';
-                          _selectedTag = '未設定';
-                        });
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        const double borderWidth = 1.0;
+                        // Total borders = 3 (left, middle, right)
+                        final double buttonWidth = (constraints.maxWidth - (borderWidth * 3)) / 2;
+                        return ToggleButtons(
+                          isSelected: [
+                            _transactionType == 'expense',
+                            _transactionType == 'income'
+                          ],
+                          onPressed: (index) {
+                            setState(() {
+                              _transactionType = index == 0 ? 'expense' : 'income';
+                              _selectedTag = '未設定';
+                            });
+                          },
+                          fillColor: _transactionType == 'expense'
+                              ? Colors.red.shade100
+                              : Colors.green.shade100,
+                          selectedColor: _transactionType == 'expense'
+                              ? Colors.red.shade800
+                              : Colors.green.shade800,
+                          color: Colors.black87,
+                          borderColor: Colors.grey.shade400,
+                          selectedBorderColor: _transactionType == 'expense'
+                              ? Colors.red.shade700
+                              : Colors.green.shade700,
+                          borderRadius: BorderRadius.circular(8.0),
+                          borderWidth: borderWidth,
+                          renderBorder: true,
+                          children: [
+                            SizedBox(
+                              width: buttonWidth,
+                              child: const Center(child: Text('支出')),
+                            ),
+                            SizedBox(
+                              width: buttonWidth,
+                              child: const Center(child: Text('収入')),
+                            ),
+                          ],
+                        );
                       },
-                      children: const [
-                        Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('支出')),
-                        Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('収入')),
-                      ],
                     ),
                     const SizedBox(height: 16),
                     Container(
@@ -389,7 +422,7 @@ class _QuickInputModalState extends State<QuickInputModal> {
                           '7',
                           '8',
                           '9',
-                          'C',
+                          '',
                           '0',
                           '✓',
                         ];
@@ -405,14 +438,20 @@ class _QuickInputModalState extends State<QuickInputModal> {
                             ),
                             child: const Icon(Icons.check, color: Colors.white),
                           );
+                        } else if (index == 9) {
+                          return ElevatedButton(
+                            onPressed: _onBackspacePressed,
+                            onLongPress: _onClearPressed,
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              textStyle: const TextStyle(fontSize: 24),
+                            ),
+                            child: const Icon(Icons.backspace_outlined),
+                          );
                         } else {
                           return ElevatedButton(
                             onPressed: () {
-                              if (key == 'C') {
-                                _onClearPressed();
-                              } else {
-                                _onNumberPressed(key);
-                              }
+                              _onNumberPressed(key);
                             },
                             style: ElevatedButton.styleFrom(
                               padding: EdgeInsets.zero,

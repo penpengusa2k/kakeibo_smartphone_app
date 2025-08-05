@@ -24,6 +24,11 @@ class _CalendarPageState extends State<CalendarPage> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _updateSelectedDayTransactions();
   }
 
@@ -149,17 +154,27 @@ class _CalendarPageState extends State<CalendarPage> {
                   }
                 }
 
+                final now = DateTime.now();
+                final isToday = now.year == _focusedDay.year &&
+                    now.month == _focusedDay.month &&
+                    now.day == day;
+
                 return GestureDetector(
                   onTap: () => _onDaySelected(DateTime(_focusedDay.year, _focusedDay.month, day), _focusedDay),
                   child: Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
+                      border: isToday
+                          ? Border.all(color: Theme.of(context).primaryColor, width: 2)
+                          : Border.all(color: Colors.grey.shade300),
                       color: isSelected ? Colors.blue.withOpacity(0.3) : Colors.white,
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('$day'),
+                        Text(
+                          '$day',
+                          style: TextStyle(fontWeight: isToday ? FontWeight.bold : FontWeight.normal),
+                        ),
                         if (dayIncome > 0) FittedBox(child: Text(Formatter.formatAmount(dayIncome), style: const TextStyle(color: Colors.green, fontSize: 10))),
                         if (dayExpense > 0) FittedBox(child: Text(Formatter.formatAmount(dayExpense), style: const TextStyle(color: Colors.red, fontSize: 10))),
                       ],
