@@ -7,6 +7,7 @@ import 'package:kakeibo_smartphone_app/models/transaction.dart';
 import 'package:kakeibo_smartphone_app/utils/formatter.dart';
 import 'package:kakeibo_smartphone_app/screens/tag_detail_page.dart';
 import 'package:kakeibo_smartphone_app/screens/total_amount_detail_page.dart';
+import 'package:flutter/cupertino.dart'; // CupertinoPickerのために追加
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -37,23 +38,84 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     super.initState();
   }
 
-  void _changeMonth(int months) {
-    setState(() {
-      _focusedMonth =
-          DateTime(_focusedMonth.year, _focusedMonth.month + months, 1);
+  // 年月選択モーダルを表示する関数
+  Future<void> _selectMonth(BuildContext context) async {
+    final now = DateTime.now();
+    int selectedYear = _focusedMonth.year;
+    int selectedMonth = _focusedMonth.month;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('年月を選択', textAlign: TextAlign.center),
+          content: SizedBox(
+            width: 300,
+            height: 200,
+            child: Row(
+              children: [
+                Expanded(
+                  child: CupertinoPicker(
+                    scrollController: FixedExtentScrollController(
+                        initialItem: selectedYear - 2000),
+                    itemExtent: 40.0,
+                    onSelectedItemChanged: (int index) {
+                      selectedYear = 2000 + index;
+                    },
+                    children: List<Widget>.generate(102, (int index) {
+                      return Center(
+                          child: Text('${2000 + index}年',
+                              style: const TextStyle(fontSize: 20)));
+                    }),
+                  ),
+                ),
+                Expanded(
+                  child: CupertinoPicker(
+                    scrollController: FixedExtentScrollController(
+                        initialItem: selectedMonth - 1),
+                    itemExtent: 40.0,
+                    onSelectedItemChanged: (int index) {
+                      selectedMonth = index + 1;
+                    },
+                    children: List<Widget>.generate(12, (int index) {
+                      return Center(
+                          child: Text('${index + 1}月',
+                              style: const TextStyle(fontSize: 20)));
+                    }),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('キャンセル'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(DateTime(selectedYear, selectedMonth));
+              },
+              child: const Text('決定'),
+            ),
+          ],
+        );
+      },
+    ).then((pickedDate) {
+      if (pickedDate != null && pickedDate is DateTime) {
+        setState(() {
+          _focusedMonth = pickedDate;
+        });
+      }
     });
   }
 
+  // 日付のズレを修正した_getFilteredTransactions関数
   List<Transaction> _getFilteredTransactions(
       List<Transaction> allTransactions) {
     return allTransactions.where((t) {
-      final transactionDate = t.date;
-      final startOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
-      final endOfMonth =
-          DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
-      final isInPeriod = transactionDate
-              .isAfter(startOfMonth.subtract(const Duration(days: 1))) &&
-          transactionDate.isBefore(endOfMonth.add(const Duration(days: 1)));
+      final isInPeriod = t.date.year == _focusedMonth.year &&
+          t.date.month == _focusedMonth.month;
       final isTypeSelected = t.type == _selectedTransactionType;
       return isInPeriod && isTypeSelected;
     }).toList();
@@ -124,51 +186,75 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back_ios),
-                        onPressed: () => _changeMonth(-1),
+                        onPressed: () {
+                          setState(() {
+                            _focusedMonth = DateTime(
+                                _focusedMonth.year, _focusedMonth.month - 1, 1);
+                          });
+                        },
                       ),
-                      Text(
-                        DateFormat('yyyy年MM月').format(_focusedMonth),
-                        style: Theme.of(context).textTheme.titleLarge,
+                      // ここを修正
+                      GestureDetector(
+                        onTap: () => _selectMonth(context),
+                        child: Text(
+                          DateFormat('yyyy年MM月').format(_focusedMonth),
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.arrow_forward_ios),
-                        onPressed: () => _changeMonth(1),
+                        onPressed: () {
+                          setState(() {
+                            _focusedMonth = DateTime(
+                                _focusedMonth.year, _focusedMonth.month + 1, 1);
+                          });
+                        },
                       ),
                     ],
                   ),
                 ),
                 // タイプ選択
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
+                                LayoutBuilder(
+                  builder: (context, constraints) {
+                    const double borderWidth = 1.0;
+                    // Total borders = 3 (left, middle, right)
+                    final double buttonWidth = (constraints.maxWidth - (borderWidth * 3)) / 2;
+                    return ToggleButtons(
+                      isSelected: [
+                        _selectedTransactionType == 'expense',
+                        _selectedTransactionType == 'income'
+                      ],
+                      onPressed: (index) {
                         setState(() {
-                          _selectedTransactionType = 'income';
+                          _selectedTransactionType = index == 0 ? 'expense' : 'income';
                         });
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _selectedTransactionType == 'income'
-                            ? Colors.green
-                            : null,
-                      ),
-                      child: const Text('収入'),
-                    ),
-                    const SizedBox(width: 16.0),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectedTransactionType = 'expense';
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _selectedTransactionType == 'expense'
-                            ? Colors.red
-                            : null,
-                      ),
-                      child: const Text('支出'),
-                    ),
-                  ],
+                      fillColor: _selectedTransactionType == 'expense'
+                          ? Colors.red.shade100
+                          : Colors.green.shade100,
+                      selectedColor: _selectedTransactionType == 'expense'
+                          ? Colors.red.shade800
+                          : Colors.green.shade800,
+                      color: Colors.black87,
+                      borderColor: Colors.grey.shade400,
+                      selectedBorderColor: _selectedTransactionType == 'expense'
+                          ? Colors.red.shade700
+                          : Colors.green.shade700,
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderWidth: borderWidth,
+                      renderBorder: true,
+                      children: [
+                        SizedBox(
+                          width: buttonWidth,
+                          child: const Center(child: Text('支出')),
+                        ),
+                        SizedBox(
+                          width: buttonWidth,
+                          child: const Center(child: Text('収入')),
+                        ),
+                      ],
+                    );
+                  },
                 ),
 
                 // カテゴリ別グラフ
@@ -178,7 +264,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 16.0),
+                        // このSizedBoxを削除
                         SizedBox(
                           height: 300, // 高さを調整
                           child: SfCircularChart(
@@ -211,15 +297,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                 },
                                 dataLabelSettings: const DataLabelSettings(
                                   isVisible: true,
-                                  labelPosition: ChartDataLabelPosition.outside,
+                                  labelPosition:
+                                      ChartDataLabelPosition.outside,
                                   connectorLineSettings: ConnectorLineSettings(
                                     type: ConnectorType.curve,
                                     length: '10%',
                                   ),
                                 ),
                                 pointColorMapper: (MapEntry<String, double>
-                                            data,
-                                        index) =>
+                                        data,
+                                    index) =>
                                     _gentleColors[index % _gentleColors.length],
                               )
                             ],
@@ -253,8 +340,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                 children: [
                                   Text(
                                     '合計',
-                                    style:
-                                        Theme.of(context).textTheme.titleMedium,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
                                   ),
                                   Row(
                                     children: [
@@ -355,11 +443,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                           initialFocusedMonth: _focusedMonth,
                                           selectedTransactionType:
                                               _selectedTransactionType,
-                                          tagColor: _gentleColors[dataByCategory
-                                                  .keys
-                                                  .toList()
-                                                  .indexOf(tag) %
-                                              _gentleColors.length],
+                                          tagColor: _gentleColors[
+                                              dataByCategory.keys
+                                                      .toList()
+                                                      .indexOf(tag) %
+                                                  _gentleColors.length],
                                         ),
                                       ),
                                     );
