@@ -53,7 +53,10 @@ class _MyAppState extends State<MyApp> {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: Scaffold(
-        body: _widgetOptions.elementAt(_selectedIndex),
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: _widgetOptions,
+        ),
         bottomNavigationBar: BottomNavigationBar(
           items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(

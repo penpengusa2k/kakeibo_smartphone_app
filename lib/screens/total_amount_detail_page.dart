@@ -1,38 +1,36 @@
-// ignore_for_file: avoid_print
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:kakeibo_smartphone_app/models/transaction.dart';
 import 'package:kakeibo_smartphone_app/utils/formatter.dart';
 
-class TagDetailPage extends StatefulWidget {
-  final String tagName;
+class TotalAmountDetailPage extends StatefulWidget {
   final List<Transaction> transactions;
   final DateTime initialFocusedMonth;
   final String selectedTransactionType;
-  final Color tagColor;
+  final List<String> allTags;
+  final List<Color> tagColors;
 
-  const TagDetailPage({
+  const TotalAmountDetailPage({
     super.key,
-    required this.tagName,
     required this.transactions,
     required this.initialFocusedMonth,
     required this.selectedTransactionType,
-    required this.tagColor,
+    required this.allTags,
+    required this.tagColors,
   });
 
   @override
-  State<TagDetailPage> createState() => _TagDetailPageState();
+  State<TotalAmountDetailPage> createState() => _TotalAmountDetailPageState();
 }
 
-class _TagDetailPageState extends State<TagDetailPage> {
+class _TotalAmountDetailPageState extends State<TotalAmountDetailPage> {
   DateTime _focusedMonth = DateTime.now();
   late ScrollController _chartScrollController;
   late ScrollController _pageScrollController;
   late List<String> _allMonthKeys;
-  static const double _barGroupWidth = 20.0;
-  static const double _barSpace = 40.0;
+  static const double _barGroupWidth = 40.0; // 少し太くする
+  static const double _barSpace = 60.0;    // 間隔を広げる
   static const double _totalBarWidth = _barGroupWidth + _barSpace;
 
   @override
@@ -120,46 +118,63 @@ class _TagDetailPageState extends State<TagDetailPage> {
         t.date.year == _focusedMonth.year &&
         t.date.month == _focusedMonth.month).toList();
 
-    final Map<String, int> monthlyTagData = {
-      for (var key in _allMonthKeys) key: 0,
+    // 月ごと、タグごとのデータを集計
+    final Map<String, Map<String, int>> monthlyTagData = {
+      for (var monthKey in _allMonthKeys) monthKey: {},
     };
     for (var t in widget.transactions) {
       final monthKey = DateFormat('yyyy-MM').format(t.date);
       if (monthlyTagData.containsKey(monthKey)) {
-        monthlyTagData[monthKey] = monthlyTagData[monthKey]! + t.amount;
+        monthlyTagData[monthKey]![t.tag] = (monthlyTagData[monthKey]![t.tag] ?? 0) + t.amount;
       }
     }
 
     final List<String> sortedMonthKeys = monthlyTagData.keys.toList()..sort();
-    double maxY = monthlyTagData.values.fold(0, (prev, val) => val > prev ? val.toDouble() : prev.toDouble());
+    double maxY = monthlyTagData.values.map((e) => e.values.fold(0, (a, b) => a + b)).fold(0, (prev, val) => val > prev ? val.toDouble() : prev.toDouble());
     maxY = (maxY * 1.2).ceilToDouble();
-    
-    if (maxY == 0) {
-      maxY = 1000;
-    }
-    
-    final List<BarChartGroupData> monthlyBarGroups = [
-      for (int i = 0; i < sortedMonthKeys.length; i++)
+    if (maxY == 0) maxY = 1000;
+
+    final List<BarChartGroupData> monthlyBarGroups = [];
+    for (int i = 0; i < sortedMonthKeys.length; i++) {
+      final monthKey = sortedMonthKeys[i];
+      final tagDataForMonth = monthlyTagData[monthKey]!;
+      final totalForMonth = tagDataForMonth.values.fold(0, (a, b) => a + b);
+
+      final List<BarChartRodStackItem> rodStackItems = [];
+      double currentFromY = 0;
+      for (var tag in widget.allTags) {
+        if (tagDataForMonth.containsKey(tag)) {
+          final amount = tagDataForMonth[tag]!;
+          final toY = currentFromY + amount;
+          final colorIndex = widget.allTags.indexOf(tag) % widget.tagColors.length;
+          rodStackItems.add(
+            BarChartRodStackItem(currentFromY, toY, widget.tagColors[colorIndex]),
+          );
+          currentFromY = toY;
+        }
+      }
+
+      monthlyBarGroups.add(
         BarChartGroupData(
           x: i,
-          showingTooltipIndicators: monthlyTagData[sortedMonthKeys[i]]! > 0 ? [0] : [],
+          showingTooltipIndicators: totalForMonth > 0 ? [0] : [],
           barRods: [
             BarChartRodData(
-              toY: monthlyTagData[sortedMonthKeys[i]]!.toDouble(),
-              color: widget.tagColor,
+              toY: totalForMonth.toDouble(),
+              rodStackItems: rodStackItems,
               width: _barGroupWidth,
               borderRadius: BorderRadius.zero,
             ),
           ],
-        )
-    ];
+        ),
+      );
+    }
 
     final chartWidth = sortedMonthKeys.length * _totalBarWidth;
-    
+
     return Scaffold(
       appBar: AppBar(
-        // AppBarのタイトルを「月別推移」に変更
-        title: Text('${widget.tagName} の月別推移'),
+        title: Text('月別合計推移'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -175,7 +190,6 @@ class _TagDetailPageState extends State<TagDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // グラフ上部のタイトルを削除
                       const SizedBox(height: 16),
                       SizedBox(
                         height: 250,
@@ -193,19 +207,22 @@ class _TagDetailPageState extends State<TagDetailPage> {
                                 barTouchData: BarTouchData(
                                   enabled: true,
                                   touchTooltipData: BarTouchTooltipData(
-                                    tooltipBgColor: Colors.transparent,
-                                    tooltipPadding: const EdgeInsets.only(bottom: 4),
-                                    tooltipMargin: 16,
+                                    tooltipBgColor: Colors.grey[200],
                                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                                      final value = rod.toY.toInt();
-                                      if (value == 0) return null;
+                                      final monthKey = sortedMonthKeys[group.x];
+                                      final tagDataForMonth = monthlyTagData[monthKey]!;
+                                      final totalForMonth = tagDataForMonth.values.fold(0, (a, b) => a + b);
+                                      if (totalForMonth == 0) return null;
+
+                                      String tooltipText = '';
+                                      tagDataForMonth.forEach((tag, amount) {
+                                        final percentage = (amount / totalForMonth * 100).toStringAsFixed(1);
+                                        tooltipText += '$tag: ${Formatter.formatAmount(amount)}円 ($percentage%)\n';
+                                      });
+
                                       return BarTooltipItem(
-                                        '${Formatter.formatAmount(value)}円',
-                                        const TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        tooltipText.trim(),
+                                        const TextStyle(color: Colors.black, fontSize: 10),
                                       );
                                     },
                                   ),
@@ -277,31 +294,70 @@ class _TagDetailPageState extends State<TagDetailPage> {
                 ],
               ),
               const SizedBox(height: 16.0),
-              Text('${DateFormat('yyyy年MM月').format(_focusedMonth)} の取引', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('${DateFormat('yyyy年MM月').format(_focusedMonth)} の内訳', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8.0),
-              currentMonthTransactions.isEmpty
-                  ? const Center(child: Text('この月の取引はありません。'))
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: currentMonthTransactions.length,
-                      itemBuilder: (context, index) {
-                        final t = currentMonthTransactions[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: ListTile(
-                            title: Text(
-                              '${DateFormat('MM/dd').format(t.date)}: ${Formatter.formatAmount(t.amount)}円',
-                              style: TextStyle(
+              Builder(
+                builder: (context) {
+                  final focusedMonthKey = DateFormat('yyyy-MM').format(_focusedMonth);
+                  final tagDataForMonth = monthlyTagData[focusedMonthKey] ?? {};
+                  final totalForMonth = tagDataForMonth.values.fold(0, (prev, amount) => prev + amount);
+                  final sortedTags = tagDataForMonth.keys.toList()..sort((a, b) => tagDataForMonth[b]!.compareTo(tagDataForMonth[a]!));
+
+                  if (tagDataForMonth.isEmpty) {
+                    return const Center(child: Text('この月の取引はありません。'));
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: sortedTags.length,
+                    itemBuilder: (context, index) {
+                      final tag = sortedTags[index];
+                      final amount = tagDataForMonth[tag]!;
+                      final percentage = totalForMonth > 0 ? (amount / totalForMonth * 100) : 0.0;
+                      String percentageText;
+                      if (percentage > 0 && percentage < 0.1) {
+                        percentageText = '<0.1';
+                      } else {
+                        percentageText = percentage.toStringAsFixed(1);
+                      }
+                      final colorIndex = widget.allTags.indexOf(tag) % widget.tagColors.length;
+                      final color = widget.tagColors[colorIndex];
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: ListTile(
+                          leading: Container(
+                            width: 60,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$percentageText%',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: t.type == 'income' ? Colors.green : Colors.red,
                               ),
                             ),
-                            subtitle: Text(t.memo ?? 'メモなし'),
                           ),
-                        );
-                      },
-                    ),
+                          title: Text(tag),
+                          trailing: Text(
+                            '${Formatter.formatAmount(amount)}円',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ],
           ),
         ),

@@ -6,6 +6,12 @@ import 'package:kakeibo_smartphone_app/utils/formatter.dart';
 import 'package:kakeibo_smartphone_app/utils/app_constants.dart';
 import 'package:kakeibo_smartphone_app/models/tag.dart';
 import 'package:kakeibo_smartphone_app/models/transaction.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:csv/csv.dart';
+import 'package:intl/intl.dart';
+
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -15,6 +21,29 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  Future<void> _exportCsv(List<Transaction> transactions) async {
+    List<List<dynamic>> rows = [];
+    rows.add(['日付', 'タイプ', '金額', 'タグ', 'メモ']);
+
+    for (var t in transactions) {
+      rows.add([
+        DateFormat('yyyy-MM-dd').format(t.date),
+        t.type == 'income' ? '収入' : '支出',
+        t.amount,
+        t.tag,
+        t.memo ?? '',
+      ]);
+    }
+
+    String csv = const ListToCsvConverter().convert(rows);
+    final directory = await getTemporaryDirectory();
+    final path = '${directory.path}/kakeibo_data.csv';
+    final file = File(path);
+    await file.writeAsString(csv);
+
+    await Share.shareXFiles([XFile(path)], text: '家計簿データ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final settingsViewModel = Provider.of<SettingsViewModel>(context);
@@ -68,6 +97,15 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('タグの編集とデフォルト設定'),
             onTap: () {
               _showTagManagementDialog(context, transactionViewModel, settingsViewModel);
+            },
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text('データのエクスポート'),
+            subtitle: const Text('全取引履歴をCSVファイルで出力します'),
+            leading: const Icon(Icons.download),
+            onTap: () {
+              _exportCsv(transactionViewModel.transactions);
             },
           ),
           ListTile(
