@@ -145,7 +145,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         .toList()
       ..sort();
 
-    final filteredTransactions = 
+    final filteredTransactions =
         _getFilteredTransactions(transactionViewModel.transactions);
 
     // サマリー計算
@@ -158,42 +158,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         totalExpense += t.amount;
       }
     }
-    int balance = totalIncome - totalExpense;
 
     // カテゴリ別グラフデータ
     Map<String, double> dataByCategory = {};
     for (var t in filteredTransactions) {
       dataByCategory[t.tag] = (dataByCategory[t.tag] ?? 0) + t.amount;
     }
-    
+
     // 表示用に、その月に存在するタグだけをソートする
     final sortedTagsForMonth = dataByCategory.keys.toList()..sort();
 
-    // 月別トレンドグラフデータ
-    Map<String, Map<String, int>> monthlyData =
-        {}; // { 'YYYY-MM': { 'income': amount, 'expense': amount } }
-    final now = DateTime.now();
-    for (int i = 0; i < 6; i++) {
-      // 過去6ヶ月分のデータを取得
-      final month = DateTime(now.year, now.month - i, 1);
-      final monthKey = DateFormat('yyyy-MM').format(month);
-      monthlyData[monthKey] = {'income': 0, 'expense': 0};
-    }
-
-    for (var t in transactionViewModel.transactions) {
-      final monthKey = DateFormat('yyyy-MM').format(t.date);
-      if (monthlyData.containsKey(monthKey)) {
-        if (t.type == 'income') {
-          monthlyData[monthKey]!['income'] =
-              monthlyData[monthKey]!['income']! + t.amount;
-        } else {
-          monthlyData[monthKey]!['expense'] =
-              monthlyData[monthKey]!['expense']! + t.amount;
-        }
-      }
-    }
-
     // 右矢印ボタンの有効/無効判定ロジック
+    final now = DateTime.now();
     final oneYearLater = DateTime(now.year + 1, now.month, 1);
     final isNextDisabled = _focusedMonth.year == oneYearLater.year && _focusedMonth.month == oneYearLater.month;
 
@@ -213,13 +189,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios),
                         onPressed: () {
                           setState(() {
                             _focusedMonth = DateTime(
                                 _focusedMonth.year, _focusedMonth.month - 1, 1);
                           });
                         },
+                        icon: const Icon(Icons.arrow_back_ios),
                       ),
                       GestureDetector(
                         onTap: () => _selectMonth(context),
@@ -231,28 +207,23 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       isNextDisabled
                         ? const SizedBox(width: 48.0) // IconButtonのスペースを確保
                         : IconButton(
-                            icon: const Icon(Icons.arrow_forward_ios),
                             onPressed: () {
                               setState(() {
                                 _focusedMonth = DateTime(
                                     _focusedMonth.year, _focusedMonth.month + 1, 1);
                               });
                             },
+                            icon: const Icon(Icons.arrow_forward_ios),
                           ),
                     ],
                   ),
                 ),
                 // タイプ選択
-                                LayoutBuilder(
+                LayoutBuilder(
                   builder: (context, constraints) {
                     const double borderWidth = 1.0;
-                    // Total borders = 3 (left, middle, right)
                     final double buttonWidth = (constraints.maxWidth - (borderWidth * 3)) / 2;
                     return ToggleButtons(
-                      isSelected: [
-                        _selectedTransactionType == 'expense',
-                        _selectedTransactionType == 'income'
-                      ],
                       onPressed: (index) {
                         setState(() {
                           _selectedTransactionType = index == 0 ? 'expense' : 'income';
@@ -272,6 +243,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       borderRadius: BorderRadius.circular(8.0),
                       borderWidth: borderWidth,
                       renderBorder: true,
+                      isSelected: [
+                        _selectedTransactionType == 'expense',
+                        _selectedTransactionType == 'income'
+                      ],
                       children: [
                         SizedBox(
                           width: buttonWidth,
@@ -294,7 +269,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(
-                            height: 300, // 高さを調整
+                            height: 300,
                             child: SfCircularChart(
                               annotations: dataByCategory.isEmpty
                                   ? <CircularChartAnnotation>[
@@ -408,7 +383,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           ),
                         ),
                         const SizedBox(height: 8.0),
-                        if (dataByCategory.isNotEmpty)  
+                        if (dataByCategory.isNotEmpty)
                         // タグごとの内訳リスト
                         ListView.builder(
                             shrinkWrap: true,
@@ -428,13 +403,32 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                               } else {
                                 percentageText = percentage.toStringAsFixed(1);
                               }
-                              final tagTransactions = filteredTransactions
-                                  .where((t) => t.tag == tag)
-                                  .toList();
-
                               return Column(
                                 children: [
                                   ListTile(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => TagDetailPage(
+                                            tagName: tag,
+                                            transactions: transactionViewModel
+                                                .transactions
+                                                .where((t) =>
+                                                    t.tag == tag &&
+                                                    t.type ==
+                                                        _selectedTransactionType)
+                                                .toList(),
+                                            initialFocusedMonth: _focusedMonth,
+                                            selectedTransactionType:
+                                                _selectedTransactionType,
+                                            tagColor: _gentleColors[
+                                                allTagsEver.indexOf(tag) %
+                                                    _gentleColors.length],
+                                          ),
+                                        ),
+                                      );
+                                    },
                                     leading: Container(
                                       width: 50,
                                       height: 24,
@@ -463,87 +457,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                             size: 16.0, color: Colors.grey),
                                       ],
                                     ),
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => TagDetailPage(
-                                            tagName: tag,
-                                            transactions: transactionViewModel
-                                                .transactions
-                                                .where((t) =>
-                                                    t.tag == tag &&
-                                                    t.type ==
-                                                        _selectedTransactionType)
-                                                .toList(),
-                                            initialFocusedMonth: _focusedMonth,
-                                            selectedTransactionType:
-                                                _selectedTransactionType,
-                                            tagColor: _gentleColors[
-                                                allTagsEver.indexOf(tag) %
-                                                    _gentleColors.length],
-                                          ),
-                                        ),
-                                      );
-                                    },
                                   ),
                                 ],
                               );
-                            },
+                            }, 
                           ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16.0),
-
-                // 月別トレンドグラフ
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('月別収入・支出トレンド',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 16.0),
-                        SizedBox(
-                          height: 200,
-                          child: SfCartesianChart(
-                            primaryXAxis: CategoryAxis(),
-                            series: <CartesianSeries>[
-                              ColumnSeries<MapEntry<String, Map<String, int>>, String>(
-                                dataSource: monthlyData.entries.toList(),
-                                xValueMapper:
-                                    (MapEntry<String, Map<String, int>> data,
-                                            _) =>
-                                        DateFormat('yy/MM').format(
-                                            DateTime.parse('${data.key}-01')),
-                                yValueMapper:
-                                    (MapEntry<String, Map<String, int>> data,
-                                            _) =>
-                                        data.value['income'],
-                                name: '収入',
-                                color: Colors.green,
-                              ),
-                              ColumnSeries<MapEntry<String, Map<String, int>>, String>(
-                                dataSource: monthlyData.entries.toList(),
-                                xValueMapper:
-                                    (MapEntry<String, Map<String, int>> data,
-                                            _) =>
-                                        DateFormat('yy/MM').format(
-                                            DateTime.parse('${data.key}-01')),
-                                yValueMapper:
-                                    (MapEntry<String, Map<String, int>> data,
-                                            _) =>
-                                        data.value['expense'],
-                                name: '支出',
-                                color: Colors.red,
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),
