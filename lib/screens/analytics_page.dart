@@ -21,16 +21,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   String _selectedTransactionType = 'expense'; // 'income' or 'expense'
 
   static const List<Color> _gentleColors = [
+    Color(0xFFE57373), // Red 300
     Color(0xFF64B5F6), // Blue 300
     Color(0xFF81C784), // Green 300
-    Color(0xFFAED581), // Light Green 300
-    Color(0xFFFFD54F), // Amber 300
-    Color(0xFFFF8A65), // Deep Orange 300
+    Color(0xFFFFB74D), // Orange 300
     Color(0xFF9575CD), // Deep Purple 300
-    Color(0xFFF06292), // Pink 300
     Color(0xFF4DB6AC), // Teal 300
+    Color(0xFFFFF176), // Yellow 300
+    Color(0xFFF06292), // Pink 300
+    Color(0xFFBA68C8), // Purple 300
     Color(0xFF7986CB), // Indigo 300
-    Color(0xFFB0BEC5), // Blue Grey 300
   ];
 
   @override
@@ -124,7 +124,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   @override
   Widget build(BuildContext context) {
     final transactionViewModel = Provider.of<TransactionViewModel>(context);
-    final filteredTransactions =
+
+    // 選択中の収支タイプにおける、全期間のタグリストを作成し、ソートする
+    final allTagsEver = transactionViewModel.transactions
+        .where((t) => t.type == _selectedTransactionType)
+        .map((t) => t.tag)
+        .toSet()
+        .toList()
+      ..sort();
+
+    final filteredTransactions = 
         _getFilteredTransactions(transactionViewModel.transactions);
 
     // サマリー計算
@@ -144,6 +153,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     for (var t in filteredTransactions) {
       dataByCategory[t.tag] = (dataByCategory[t.tag] ?? 0) + t.amount;
     }
+    
+    // 表示用に、その月に存在するタグだけをソートする
+    final sortedTagsForMonth = dataByCategory.keys.toList()..sort();
 
     // 月別トレンドグラフデータ
     Map<String, Map<String, int>> monthlyData =
@@ -270,7 +282,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           child: SfCircularChart(
                             series: <CircularSeries>[
                               PieSeries<MapEntry<String, double>, String>(
-                                dataSource: dataByCategory.entries.toList(),
+                                dataSource: sortedTagsForMonth.map((tag) => MapEntry(tag, dataByCategory[tag]!)).toList(),
                                 xValueMapper:
                                     (MapEntry<String, double> data, _) =>
                                         data.key,
@@ -304,10 +316,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                     length: '10%',
                                   ),
                                 ),
-                                pointColorMapper: (MapEntry<String, double>
-                                        data,
-                                    index) =>
-                                    _gentleColors[index % _gentleColors.length],
+                                pointColorMapper: (MapEntry<String, double> data, _) => 
+                                  _gentleColors[allTagsEver.indexOf(data.key) % _gentleColors.length],
                               )
                             ],
                           ),
@@ -323,7 +333,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                   initialFocusedMonth: _focusedMonth,
                                   selectedTransactionType:
                                       _selectedTransactionType,
-                                  allTags: dataByCategory.keys.toList(),
+                                  allTags: allTagsEver,
                                   tagColors: _gentleColors,
                                 ),
                               ),
@@ -374,9 +384,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: dataByCategory.keys.length,
+                          itemCount: sortedTagsForMonth.length,
                           itemBuilder: (context, index) {
-                            final tag = dataByCategory.keys.elementAt(index);
+                            final tag = sortedTagsForMonth[index];
                             final amount = dataByCategory[tag]!;
                             final total = (_selectedTransactionType == 'income'
                                 ? totalIncome
@@ -400,10 +410,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                     width: 50,
                                     height: 24,
                                     decoration: BoxDecoration(
-                                      color: _gentleColors[dataByCategory.keys
-                                              .toList()
-                                              .indexOf(tag) %
-                                          _gentleColors.length],
+                                      color: _gentleColors[allTagsEver.indexOf(tag) % _gentleColors.length],
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     alignment: Alignment.center,
@@ -444,9 +451,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                           selectedTransactionType:
                                               _selectedTransactionType,
                                           tagColor: _gentleColors[
-                                              dataByCategory.keys
-                                                      .toList()
-                                                      .indexOf(tag) %
+                                              allTagsEver.indexOf(tag) %
                                                   _gentleColors.length],
                                         ),
                                       ),
@@ -479,8 +484,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           child: SfCartesianChart(
                             primaryXAxis: CategoryAxis(),
                             series: <CartesianSeries>[
-                              ColumnSeries<MapEntry<String, Map<String, int>>,
-                                  String>(
+                              ColumnSeries<MapEntry<String, Map<String, int>>, String>(
                                 dataSource: monthlyData.entries.toList(),
                                 xValueMapper:
                                     (MapEntry<String, Map<String, int>> data,
@@ -494,8 +498,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                 name: '収入',
                                 color: Colors.green,
                               ),
-                              ColumnSeries<MapEntry<String, Map<String, int>>,
-                                  String>(
+                              ColumnSeries<MapEntry<String, Map<String, int>>, String>(
                                 dataSource: monthlyData.entries.toList(),
                                 xValueMapper:
                                     (MapEntry<String, Map<String, int>> data,
