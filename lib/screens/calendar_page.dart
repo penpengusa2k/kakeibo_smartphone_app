@@ -103,7 +103,12 @@ class _CalendarPageState extends State<CalendarPage> {
               ],
             ),
           ),
-          actions: [
+          actions: <Widget>[
+            TextButton(
+              child: const Text('今月へ戻る'),
+              onPressed: () => Navigator.of(context).pop(DateTime.now()),
+            ),
+            const Spacer(),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('キャンセル'),
