@@ -188,6 +188,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       }
     }
 
+    // 右矢印ボタンの有効/無効判定ロジック
+    final oneYearLater = DateTime(now.year + 1, now.month, 1);
+    final isNextDisabled = _focusedMonth.year == oneYearLater.year && _focusedMonth.month == oneYearLater.month;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -212,7 +216,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           });
                         },
                       ),
-                      // ここを修正
                       GestureDetector(
                         onTap: () => _selectMonth(context),
                         child: Text(
@@ -220,19 +223,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios),
-                        onPressed: () {
-                          final now = DateTime.now();
-                          final oneYearLater = DateTime(now.year + 1, now.month, 1);
-                          final nextMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 1);
-                          if (nextMonth.isAfter(oneYearLater)) return; // 1年後より未来なら何もしない
-
-                          setState(() {
-                            _focusedMonth = nextMonth;
-                          });
-                        },
-                      ),
+                      isNextDisabled
+                        ? const SizedBox(width: 48.0) // IconButtonのスペースを確保
+                        : IconButton(
+                            icon: const Icon(Icons.arrow_forward_ios),
+                            onPressed: () {
+                              setState(() {
+                                _focusedMonth = DateTime(
+                                    _focusedMonth.year, _focusedMonth.month + 1, 1);
+                              });
+                            },
+                          ),
                     ],
                   ),
                 ),

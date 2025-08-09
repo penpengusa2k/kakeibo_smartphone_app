@@ -173,6 +173,10 @@ class _TotalAmountDetailPageState extends State<TotalAmountDetailPage> {
     }
 
     final chartWidth = sortedMonthKeys.length * _totalBarWidth;
+    
+    final now = DateTime.now();
+    final oneYearLater = DateTime(now.year + 1, now.month, 1);
+    final isNextDisabled = _focusedMonth.year == oneYearLater.year && _focusedMonth.month == oneYearLater.month;
 
     return Scaffold(
       appBar: AppBar(
@@ -289,10 +293,12 @@ class _TotalAmountDetailPageState extends State<TotalAmountDetailPage> {
                     onPressed: () => _changeMonth(-1),
                   ),
                   Text(DateFormat('yyyy年MM月').format(_focusedMonth), style: Theme.of(context).textTheme.titleLarge),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward_ios),
-                    onPressed: () => _changeMonth(1),
-                  ),
+                  isNextDisabled
+                    ? const SizedBox(width: 48.0)
+                    : IconButton(
+                        icon: const Icon(Icons.arrow_forward_ios),
+                        onPressed: () => _changeMonth(1),
+                      ),
                 ],
               ),
               const SizedBox(height: 16.0),

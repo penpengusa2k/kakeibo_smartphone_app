@@ -170,6 +170,10 @@ class _CalendarPageState extends State<CalendarPage> {
       if (budgetProgress > 1.0) budgetProgress = 1.0;
     }
 
+    final now = DateTime.now();
+    final oneYearLater = DateTime(now.year + 1, now.month, 1);
+    final isNextDisabled = _focusedDay.year == oneYearLater.year && _focusedDay.month == oneYearLater.month;
+
     return Scaffold(
       body: SafeArea(
           child: Padding(
@@ -191,7 +195,6 @@ class _CalendarPageState extends State<CalendarPage> {
                           );
                         },
                       ),
-                      // ここを修正
                       GestureDetector(
                         onTap: () => _selectMonth(context),
                         child: Text(
@@ -199,20 +202,17 @@ class _CalendarPageState extends State<CalendarPage> {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios),
-                        onPressed: () {
-                          final now = DateTime.now();
-                          final oneYearLater = DateTime(now.year + 1, now.month, 1);
-                          final nextMonth = DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
-                          if (nextMonth.isAfter(oneYearLater)) return; // 1年後より未来なら何もしない
-
-                          _pageController.nextPage(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOut,
-                          );
-                        },
-                      ),
+                      isNextDisabled
+                        ? const SizedBox(width: 48.0) // IconButtonのスペースを確保
+                        : IconButton(
+                            icon: const Icon(Icons.arrow_forward_ios),
+                            onPressed: () {
+                              _pageController.nextPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOut,
+                              );
+                            },
+                          ),
                     ],
                   ),
                 ),
