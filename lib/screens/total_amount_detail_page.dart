@@ -52,7 +52,7 @@ class _TotalAmountDetailPageState extends State<TotalAmountDetailPage> {
     List<String> monthKeys = [];
     DateTime now = DateTime.now();
     DateTime minMonth;
-    DateTime maxMonth = now; // 終了月は常に今月
+    DateTime maxMonth = DateTime(now.year + 1, now.month, 1); // 終了月は1年後
 
     if (widget.transactions.isEmpty) {
       minMonth = DateTime(now.year, now.month - 7, 1);

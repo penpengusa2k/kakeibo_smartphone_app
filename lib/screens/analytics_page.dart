@@ -38,7 +38,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     super.initState();
   }
 
-  // 年月選択モーダルを表示する関数
   Future<void> _selectMonth(BuildContext context) async {
     final now = DateTime.now();
     int selectedYear = _focusedMonth.year;
@@ -62,7 +61,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     onSelectedItemChanged: (int index) {
                       selectedYear = 2000 + index;
                     },
-                    children: List<Widget>.generate(102, (int index) {
+                    children: List<Widget>.generate(now.year - 2000 + 2, (int index) { // 来年まで表示
                       return Center(
                           child: Text('${2000 + index}年',
                               style: const TextStyle(fontSize: 20)));
@@ -94,7 +93,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(DateTime(selectedYear, selectedMonth));
+                final oneYearLater = DateTime(now.year + 1, now.month, 1);
+                final selectedDate = DateTime(selectedYear, selectedMonth);
+                if (selectedDate.isAfter(oneYearLater)) { // 1年後より未来は選択不可
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('1年後より未来の月は選択できません')),
+                  );
+                  return;
+                }
+                Navigator.of(context).pop(selectedDate);
               },
               child: const Text('決定'),
             ),
@@ -216,9 +223,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       IconButton(
                         icon: const Icon(Icons.arrow_forward_ios),
                         onPressed: () {
+                          final now = DateTime.now();
+                          final oneYearLater = DateTime(now.year + 1, now.month, 1);
+                          final nextMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 1);
+                          if (nextMonth.isAfter(oneYearLater)) return; // 1年後より未来なら何もしない
+
                           setState(() {
-                            _focusedMonth = DateTime(
-                                _focusedMonth.year, _focusedMonth.month + 1, 1);
+                            _focusedMonth = nextMonth;
                           });
                         },
                       ),

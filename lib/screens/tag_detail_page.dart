@@ -54,17 +54,18 @@ class _TagDetailPageState extends State<TagDetailPage> {
     List<String> monthKeys = [];
     DateTime now = DateTime.now();
     DateTime minMonth;
+    DateTime maxMonth = DateTime(now.year + 1, now.month, 1); // 終了月は1年後
+
     if (widget.transactions.isEmpty) {
       minMonth = DateTime(now.year, now.month - 7, 1);
     } else {
       DateTime minDate = widget.transactions.map((t) => t.date).reduce((a, b) => a.isBefore(b) ? a : b);
-      DateTime maxDate = widget.transactions.map((t) => t.date).reduce((a, b) => a.isAfter(b) ? a : b);
       DateTime eightMonthsAgo = DateTime(now.year, now.month - 7, 1);
       minMonth = minDate.isBefore(eightMonthsAgo) ? minDate : eightMonthsAgo;
-      if (maxDate.isBefore(now)) maxDate = now;
     }
+
     DateTime currentMonth = DateTime(minMonth.year, minMonth.month, 1);
-    while (currentMonth.isBefore(DateTime(now.year, now.month + 1, 1))) {
+    while (currentMonth.isBefore(DateTime(maxMonth.year, maxMonth.month + 1, 1))) {
       monthKeys.add(DateFormat('yyyy-MM').format(currentMonth));
       currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
     }
