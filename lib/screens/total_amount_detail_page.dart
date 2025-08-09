@@ -52,17 +52,19 @@ class _TotalAmountDetailPageState extends State<TotalAmountDetailPage> {
     List<String> monthKeys = [];
     DateTime now = DateTime.now();
     DateTime minMonth;
+    DateTime maxMonth = now; // 終了月は常に今月
+
     if (widget.transactions.isEmpty) {
       minMonth = DateTime(now.year, now.month - 7, 1);
     } else {
       DateTime minDate = widget.transactions.map((t) => t.date).reduce((a, b) => a.isBefore(b) ? a : b);
-      DateTime maxDate = widget.transactions.map((t) => t.date).reduce((a, b) => a.isAfter(b) ? a : b);
       DateTime eightMonthsAgo = DateTime(now.year, now.month - 7, 1);
       minMonth = minDate.isBefore(eightMonthsAgo) ? minDate : eightMonthsAgo;
-      if (maxDate.isBefore(now)) maxDate = now;
     }
+
     DateTime currentMonth = DateTime(minMonth.year, minMonth.month, 1);
-    while (currentMonth.isBefore(DateTime(now.year, now.month + 1, 1))) {
+    // ループの終了条件をmaxMonthにする
+    while (currentMonth.isBefore(DateTime(maxMonth.year, maxMonth.month + 1, 1))) {
       monthKeys.add(DateFormat('yyyy-MM').format(currentMonth));
       currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
     }
@@ -207,22 +209,22 @@ class _TotalAmountDetailPageState extends State<TotalAmountDetailPage> {
                                 barTouchData: BarTouchData(
                                   enabled: true,
                                   touchTooltipData: BarTouchTooltipData(
-                                    tooltipBgColor: Colors.grey[200],
+                                    tooltipBgColor: Colors.transparent,
+                                    tooltipPadding: const EdgeInsets.only(bottom: 4),
+                                    tooltipMargin: 16,
                                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                                       final monthKey = sortedMonthKeys[group.x];
                                       final tagDataForMonth = monthlyTagData[monthKey]!;
                                       final totalForMonth = tagDataForMonth.values.fold(0, (a, b) => a + b);
                                       if (totalForMonth == 0) return null;
 
-                                      String tooltipText = '';
-                                      tagDataForMonth.forEach((tag, amount) {
-                                        final percentage = (amount / totalForMonth * 100).toStringAsFixed(1);
-                                        tooltipText += '$tag: ${Formatter.formatAmount(amount)}円 ($percentage%)\n';
-                                      });
-
                                       return BarTooltipItem(
-                                        tooltipText.trim(),
-                                        const TextStyle(color: Colors.black, fontSize: 10),
+                                        '${Formatter.formatAmount(totalForMonth)}円',
+                                        const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       );
                                     },
                                   ),

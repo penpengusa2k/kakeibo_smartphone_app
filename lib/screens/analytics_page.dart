@@ -319,7 +319,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => TotalAmountDetailPage(
-                                  transactions: filteredTransactions,
+                                  transactions: transactionViewModel.transactions.where((t) => t.type == _selectedTransactionType).toList(),
                                   initialFocusedMonth: _focusedMonth,
                                   selectedTransactionType:
                                       _selectedTransactionType,
