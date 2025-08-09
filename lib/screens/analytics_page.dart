@@ -293,52 +293,63 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // このSizedBoxを削除
                         SizedBox(
-                          height: 300, // 高さを調整
-                          child: SfCircularChart(
-                            series: <CircularSeries>[
-                              PieSeries<MapEntry<String, double>, String>(
-                                dataSource: sortedTagsForMonth.map((tag) => MapEntry(tag, dataByCategory[tag]!)).toList(),
-                                xValueMapper:
-                                    (MapEntry<String, double> data, _) =>
-                                        data.key,
-                                yValueMapper:
-                                    (MapEntry<String, double> data, _) =>
-                                        data.value,
-                                dataLabelMapper:
-                                    (MapEntry<String, double> data, _) {
-                                  final total =
-                                      (_selectedTransactionType == 'income'
-                                          ? totalIncome
-                                          : totalExpense);
-                                  final percentage = total > 0
-                                      ? (data.value / total * 100)
-                                      : 0.0;
-                                  String percentageText;
-                                  if (percentage > 0 && percentage < 0.1) {
-                                    percentageText = '<0.1%';
-                                  } else {
-                                    percentageText =
-                                        '${percentage.toStringAsFixed(1)}%';
-                                  }
-                                  return '${data.key}\n$percentageText';
-                                },
-                                dataLabelSettings: const DataLabelSettings(
-                                  isVisible: true,
-                                  labelPosition:
-                                      ChartDataLabelPosition.outside,
-                                  connectorLineSettings: ConnectorLineSettings(
-                                    type: ConnectorType.curve,
-                                    length: '10%',
+                            height: 300, // 高さを調整
+                            child: SfCircularChart(
+                              annotations: dataByCategory.isEmpty
+                                  ? <CircularChartAnnotation>[
+                                      CircularChartAnnotation(
+                                          widget: const Text('表示するデータがありません'))
+                                    ]
+                                  : null,
+                              series: <CircularSeries>[
+                                PieSeries<MapEntry<String, double>, String>(
+                                  dataSource: sortedTagsForMonth
+                                      .map((tag) =>
+                                          MapEntry(tag, dataByCategory[tag]!))
+                                      .toList(),
+                                  xValueMapper:
+                                      (MapEntry<String, double> data, _) =>
+                                          data.key,
+                                  yValueMapper:
+                                      (MapEntry<String, double> data, _) =>
+                                          data.value,
+                                  dataLabelMapper:
+                                      (MapEntry<String, double> data, _) {
+                                    final total =
+                                        (_selectedTransactionType == 'income'
+                                            ? totalIncome
+                                            : totalExpense);
+                                    final percentage = total > 0
+                                        ? (data.value / total * 100)
+                                        : 0.0;
+                                    String percentageText;
+                                    if (percentage > 0 && percentage < 0.1) {
+                                      percentageText = '<0.1%';
+                                    } else {
+                                      percentageText =
+                                          '${percentage.toStringAsFixed(1)}%';
+                                    }
+                                    return '${data.key}\n$percentageText';
+                                  },
+                                  dataLabelSettings: const DataLabelSettings(
+                                    isVisible: true,
+                                    labelPosition:
+                                        ChartDataLabelPosition.outside,
+                                    connectorLineSettings: ConnectorLineSettings(
+                                      type: ConnectorType.curve,
+                                      length: '10%',
+                                    ),
                                   ),
-                                ),
-                                pointColorMapper: (MapEntry<String, double> data, _) => 
-                                  _gentleColors[allTagsEver.indexOf(data.key) % _gentleColors.length],
-                              )
-                            ],
+                                  pointColorMapper:
+                                      (MapEntry<String, double> data, _) =>
+                                          _gentleColors[allTagsEver
+                                                  .indexOf(data.key) %
+                                              _gentleColors.length],
+                                )
+                              ],
+                            ),
                           ),
-                        ),
                         const SizedBox(height: 16.0),
                         GestureDetector(
                           onTap: () {
@@ -397,88 +408,89 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           ),
                         ),
                         const SizedBox(height: 8.0),
+                        if (dataByCategory.isNotEmpty)  
                         // タグごとの内訳リスト
                         ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: sortedTagsForMonth.length,
-                          itemBuilder: (context, index) {
-                            final tag = sortedTagsForMonth[index];
-                            final amount = dataByCategory[tag]!;
-                            final total = (_selectedTransactionType == 'income'
-                                ? totalIncome
-                                : totalExpense);
-                            final percentage =
-                                total > 0 ? (amount / total * 100) : 0.0;
-                            String percentageText;
-                            if (percentage > 0 && percentage < 0.1) {
-                              percentageText = '<0.1';
-                            } else {
-                              percentageText = percentage.toStringAsFixed(1);
-                            }
-                            final tagTransactions = filteredTransactions
-                                .where((t) => t.tag == tag)
-                                .toList();
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: sortedTagsForMonth.length,
+                            itemBuilder: (context, index) {
+                              final tag = sortedTagsForMonth[index];
+                              final amount = dataByCategory[tag]!;
+                              final total = (_selectedTransactionType == 'income'
+                                  ? totalIncome
+                                  : totalExpense);
+                              final percentage =
+                                  total > 0 ? (amount / total * 100) : 0.0;
+                              String percentageText;
+                              if (percentage > 0 && percentage < 0.1) {
+                                percentageText = '<0.1';
+                              } else {
+                                percentageText = percentage.toStringAsFixed(1);
+                              }
+                              final tagTransactions = filteredTransactions
+                                  .where((t) => t.tag == tag)
+                                  .toList();
 
-                            return Column(
-                              children: [
-                                ListTile(
-                                  leading: Container(
-                                    width: 50,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: _gentleColors[allTagsEver.indexOf(tag) % _gentleColors.length],
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      '$percentageText%',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
+                              return Column(
+                                children: [
+                                  ListTile(
+                                    leading: Container(
+                                      width: 50,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: _gentleColors[allTagsEver.indexOf(tag) % _gentleColors.length],
+                                        borderRadius: BorderRadius.circular(4),
                                       ),
-                                    ),
-                                  ),
-                                  title: Text(tag),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                          '${Formatter.formatAmount(amount.toInt())}円'),
-                                      const SizedBox(width: 8),
-                                      const Icon(Icons.arrow_forward_ios,
-                                          size: 16.0, color: Colors.grey),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => TagDetailPage(
-                                          tagName: tag,
-                                          transactions: transactionViewModel
-                                              .transactions
-                                              .where((t) =>
-                                                  t.tag == tag &&
-                                                  t.type ==
-                                                      _selectedTransactionType)
-                                              .toList(),
-                                          initialFocusedMonth: _focusedMonth,
-                                          selectedTransactionType:
-                                              _selectedTransactionType,
-                                          tagColor: _gentleColors[
-                                              allTagsEver.indexOf(tag) %
-                                                  _gentleColors.length],
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '$percentageText%',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            );
-                          },
-                        ),
+                                    ),
+                                    title: Text(tag),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                            '${Formatter.formatAmount(amount.toInt())}円'),
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.arrow_forward_ios,
+                                            size: 16.0, color: Colors.grey),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => TagDetailPage(
+                                            tagName: tag,
+                                            transactions: transactionViewModel
+                                                .transactions
+                                                .where((t) =>
+                                                    t.tag == tag &&
+                                                    t.type ==
+                                                        _selectedTransactionType)
+                                                .toList(),
+                                            initialFocusedMonth: _focusedMonth,
+                                            selectedTransactionType:
+                                                _selectedTransactionType,
+                                            tagColor: _gentleColors[
+                                                allTagsEver.indexOf(tag) %
+                                                    _gentleColors.length],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                       ],
                     ),
                   ),
