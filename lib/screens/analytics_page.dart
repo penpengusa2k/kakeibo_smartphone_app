@@ -8,6 +8,7 @@ import 'package:kakeibo_smartphone_app/utils/formatter.dart';
 import 'package:kakeibo_smartphone_app/screens/tag_detail_page.dart';
 import 'package:kakeibo_smartphone_app/screens/total_amount_detail_page.dart';
 import 'package:flutter/cupertino.dart'; // CupertinoPickerのために追加
+import 'package:kakeibo_smartphone_app/screens/balance_analysis_page.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -218,6 +219,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     ],
                   ),
                 ),
+                // 収支分析画面への遷移ボタン
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BalanceAnalysisPage(),
+                        ),
+                      );
+                    },
+                    child: const Text('収支分析'),
+                  ),
+                ),
+                const SizedBox(height: 16.0),
                 // タイプ選択
                 LayoutBuilder(
                   builder: (context, constraints) {
