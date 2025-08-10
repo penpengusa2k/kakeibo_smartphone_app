@@ -37,17 +37,17 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     setState(() {
       switch (_selectedPeriod) {
         case Period.day:
-          _startDate = DateTime(now.year, now.month, now.day)
-              .subtract(const Duration(days: 7));
+          _startDate =
+              DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
           _endDate = DateTime(now.year, now.month, now.day);
           break;
         case Period.month:
           _startDate = DateTime(now.year, now.month - 6, 1);
-          _endDate   = DateTime(now.year, now.month + 1, 0); // 月末
+          _endDate = DateTime(now.year, now.month + 1, 0); // 月末
           break;
         case Period.year:
           _startDate = DateTime(now.year - 2, 1, 1);
-          _endDate   = DateTime(now.year, 12, 31);           // 年末
+          _endDate = DateTime(now.year, 12, 31); // 年末
           break;
       }
     });
@@ -154,80 +154,75 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
       setState(() {
         if (_selectedPeriod == Period.year) {
           _startDate = DateTime(result.year, 1, 1);
-          _endDate   = DateTime(result.year, 12, 31);
+          _endDate = DateTime(result.year, 12, 31);
         } else {
           _startDate = DateTime(result.year, result.month, 1);
-          _endDate   = DateTime(result.year, result.month + 1, 0);
+          _endDate = DateTime(result.year, result.month + 1, 0);
         }
       });
     }
   }
 
-  List<ChartData> _getChartData(List<Transaction> transactions) {
-    final Map<String, Map<String, int>> aggregatedData = {};
+  List<ChartData> _getChartData(List<Transaction> txs) {
+    final Map<String, Map<String, int>> agg = {};
 
-    final filtered = transactions.where((t) {
+    final filtered = txs.where((t) {
       return t.date.isAfter(_startDate.subtract(const Duration(days: 1))) &&
-             t.date.isBefore(_endDate.add(const Duration(days: 1)));
+          t.date.isBefore(_endDate.add(const Duration(days: 1)));
     }).toList();
 
     for (var t in filtered) {
-      String keyDate;
+      String key;
       switch (_selectedPeriod) {
         case Period.day:
-          keyDate = DateFormat('MM/dd').format(t.date);
+          key = DateFormat('MM/dd').format(t.date);
           break;
         case Period.month:
-          keyDate = DateFormat('yy/MM').format(t.date);
+          key = DateFormat('yy/MM').format(t.date);
           break;
         case Period.year:
-          keyDate = DateFormat('yyyy').format(t.date);
+          key = DateFormat('yyyy').format(t.date);
           break;
       }
-      aggregatedData.putIfAbsent(keyDate, () => {'income': 0, 'expense': 0});
+      agg.putIfAbsent(key, () => {'income': 0, 'expense': 0});
       if (t.type == 'income') {
-        aggregatedData[keyDate]!['income'] =
-            (aggregatedData[keyDate]!['income'] ?? 0) + t.amount;
+        agg[key]!['income'] = (agg[key]!['income'] ?? 0) + t.amount;
       } else {
-        aggregatedData[keyDate]!['expense'] =
-            (aggregatedData[keyDate]!['expense'] ?? 0) + t.amount;
+        agg[key]!['expense'] = (agg[key]!['expense'] ?? 0) + t.amount;
       }
     }
 
-    // 期間内のラベル（Xは index）
-    final List<String> dateKeys = [];
+    final List<String> keys = [];
     DateTime cur = _startDate;
     while (cur.isBefore(_endDate) || cur.isAtSameMomentAs(_endDate)) {
       switch (_selectedPeriod) {
         case Period.day:
-          dateKeys.add(DateFormat('MM/dd').format(cur));
+          keys.add(DateFormat('MM/dd').format(cur));
           cur = cur.add(const Duration(days: 1));
           break;
         case Period.month:
-          dateKeys.add(DateFormat('yy/MM').format(cur));
+          keys.add(DateFormat('yy/MM').format(cur));
           cur = DateTime(cur.year, cur.month + 1, 1);
           break;
         case Period.year:
-          dateKeys.add(DateFormat('yyyy').format(cur));
+          keys.add(DateFormat('yyyy').format(cur));
           cur = DateTime(cur.year + 1, 1, 1);
           break;
       }
     }
 
-    return dateKeys.map((key) {
-      final income  = aggregatedData[key]?['income']  ?? 0;
-      final expense = aggregatedData[key]?['expense'] ?? 0;
+    return keys.map((k) {
+      final income = agg[k]?['income'] ?? 0;
+      final expense = agg[k]?['expense'] ?? 0;
       final balance = income - expense;
-      return ChartData(key, income, expense, balance);
+      return ChartData(k, income, expense, balance);
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final transactions = context.select<TransactionViewModel, List<Transaction>>(
-      (vm) => vm.transactions,
-    );
-    final data = _getChartData(transactions);
+    final txs = context.select<TransactionViewModel, List<Transaction>>((vm) => vm.transactions);
+    final data = _getChartData(txs);
 
     String dateRangeText;
     if (_selectedPeriod == Period.day) {
@@ -241,22 +236,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
           '${DateFormat('yyyy年').format(_startDate)} - ${DateFormat('yyyy年').format(_endDate)}';
     }
 
-    // Y軸レンジ（±対称）
-    double maxAbsValue = 0;
-    for (final d in data) {
-      maxAbsValue = max(maxAbsValue, d.income.abs().toDouble());
-      maxAbsValue = max(maxAbsValue, d.expense.abs().toDouble());
-      maxAbsValue = max(maxAbsValue, d.balance.abs().toDouble());
-    }
-    maxAbsValue = (maxAbsValue == 0 ? 1000 : maxAbsValue * 1.1);
-
-    // ラベル回転・間引き
-    double labelAngleDeg = 0;
-    int labelStep = 1;
-    if (_selectedPeriod == Period.day) {
-      labelAngleDeg = -45;
-      if (data.length > 10) labelStep = 2;
-    }
+    // 表示は各チャート側で計算するのでここでは触らない
 
     return Scaffold(
       appBar: AppBar(title: const Text('収支分析')),
@@ -268,9 +248,9 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
               Center(
                 child: ToggleButtons(
                   isSelected: Period.values.map((p) => _selectedPeriod == p).toList(),
-                  onPressed: (int index) {
+                  onPressed: (i) {
                     setState(() {
-                      _selectedPeriod = Period.values[index];
+                      _selectedPeriod = Period.values[i];
                       _updateDateRange();
                     });
                   },
@@ -298,7 +278,6 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              // 凡例
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
@@ -306,7 +285,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                   SizedBox(width: 12),
                   _LegendDot(color: Colors.red, label: '支出'),
                   SizedBox(width: 12),
-                  _LegendDot(color: Colors.blue, label: '収支'),
+                  _LegendDot(color: Colors.blue, label: '収支(累計)'),
                 ],
               ),
               const SizedBox(height: 8),
@@ -318,36 +297,9 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                     width: double.infinity,
                     child: data.isEmpty
                         ? const Center(child: Text('データがありません'))
-                        : LayoutBuilder(
-                            builder: (context, constraints) {
-                              // 1点あたりの横幅（お好みで調整）
-                              final step = _selectedPeriod == Period.day
-                                  ? 56.0
-                                  : (_selectedPeriod == Period.month ? 72.0 : 100.0);
-
-                              final contentWidth =
-                                  max(constraints.maxWidth, data.length * step);
-
-                              return SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                physics: const BouncingScrollPhysics(),
-                                child: SizedBox(
-                                  width: contentWidth,
-                                  child: _UnifiedLineChart(
-                                    labels: data.map((e) => e.date).toList(),
-                                    incomes:
-                                        data.map((e) => e.income.toDouble()).toList(),
-                                    expenses:
-                                        data.map((e) => (-e.expense).toDouble()).toList(),
-                                    balances:
-                                        data.map((e) => e.balance.toDouble()).toList(),
-                                    maxAbsY: maxAbsValue,
-                                    labelAngleDeg: labelAngleDeg,
-                                    labelStep: labelStep,
-                                  ),
-                                ),
-                              );
-                            },
+                        : _StickyYAxisScrollableChart(
+                            data: data,
+                            period: _selectedPeriod,
                           ),
                   ),
                 ),
@@ -369,11 +321,7 @@ class _LegendDot extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
+        Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 6),
         Text(label),
       ],
@@ -381,27 +329,166 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
+// ───────────────────────────────────────────────────────────────────
+// 横スクロール本体 + 固定Y軸（折れ線は累計推移）
+// ───────────────────────────────────────────────────────────────────
+class _StickyYAxisScrollableChart extends StatelessWidget {
+  const _StickyYAxisScrollableChart({
+    required this.data,
+    required this.period,
+  });
+
+  final List<ChartData> data;
+  final Period period;
+
+  static const double _leftReserved = 44;
+
+  double _bottomReserved(double labelAngleDeg) =>
+      labelAngleDeg == 0 ? 24 : 40;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = data.map((e) => e.date).toList();
+    final incomes = data.map((e) => e.income.toDouble()).toList();
+    final expenses = data.map((e) => (-e.expense).toDouble()).toList(); // 負で持つ
+
+    // 折れ線は累計推移に変更
+    final cumulative = <double>[];
+    double run = 0;
+    for (int i = 0; i < labels.length; i++) {
+      run += incomes[i] + expenses[i]; // 収入 + (負の)支出
+      cumulative.add(run);
+    }
+
+    // ラベル角度・間引き
+    double labelAngle = 0;
+    int labelStep = 1;
+    if (period == Period.day) {
+      labelAngle = -45;
+      if (labels.length > 10) labelStep = 2;
+    }
+
+    // Yレンジは 棒(収入/支出) と 累計 の両方を含めて決定
+    double maxAbsY = 0;
+    for (int i = 0; i < labels.length; i++) {
+      maxAbsY = max(maxAbsY, incomes[i].abs());
+      maxAbsY = max(maxAbsY, expenses[i].abs());
+      maxAbsY = max(maxAbsY, cumulative[i].abs());
+    }
+    if (maxAbsY == 0) maxAbsY = 1000;
+    maxAbsY *= 1.1;
+
+    // 1点あたりの横幅（期間に応じて広め）
+    final step = period == Period.day ? 56.0 : (period == Period.month ? 72.0 : 100.0);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final plotWidth = max(constraints.maxWidth - _leftReserved, step * labels.length);
+
+        // 左：固定Y軸（横グリッド＆左目盛だけ）
+        final axisChart = LineChart(
+          LineChartData(
+            minX: 0,
+            maxX: 1,
+            minY: -maxAbsY,
+            maxY: maxAbsY,
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (v) => FlLine(strokeWidth: 0.5, color: Colors.black12),
+            ),
+            titlesData: FlTitlesData(
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: false,
+                  reservedSize: _bottomReserved(labelAngle),
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: _leftReserved,
+                  getTitlesWidget: (v, _) =>
+                      Text(NumberFormat.compact().format(v), style: const TextStyle(fontSize: 10)),
+                ),
+              ),
+            ),
+            borderData: FlBorderData(
+              show: true,
+              border: const Border(
+                top: BorderSide(color: Colors.black12, width: 1),
+                right: BorderSide(color: Colors.transparent, width: 1),
+                left: BorderSide(color: Colors.black12, width: 1),
+                bottom: BorderSide(color: Colors.black12, width: 1),
+              ),
+            ),
+            lineBarsData: const [],
+            lineTouchData: LineTouchData(enabled: false),
+          ),
+        );
+
+        // 右：スクロールする本体（左目盛なし）
+        final scrollChart = _UnifiedLineChart(
+          labels: labels,
+          incomes: incomes,
+          expenses: expenses,
+          balances: cumulative,           // 累計
+          maxAbsY: maxAbsY,
+          labelAngleDeg: labelAngle,
+          labelStep: labelStep,
+          showLeftAxis: false,
+          leftReserved: _leftReserved,
+          bottomReserved: _bottomReserved(labelAngle),
+          drawLeftBorder: false,
+        );
+
+        return Row(
+          children: [
+            SizedBox(width: _leftReserved, child: axisChart),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: SizedBox(width: plotWidth, child: scrollChart),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// 1つのLineChartで 棒(縦線) + 折れ線(累計) を描画（ツールチップ対応）
 class _UnifiedLineChart extends StatelessWidget {
   const _UnifiedLineChart({
     required this.labels,
     required this.incomes,
-    required this.expenses,
-    required this.balances,
+    required this.expenses, // 既に負で渡す
+    required this.balances, // ここは累計に変更されて渡ってくる
     required this.maxAbsY,
     required this.labelAngleDeg,
     required this.labelStep,
+    this.showLeftAxis = true,
+    this.leftReserved = 44,
+    this.bottomReserved = 24,
+    this.drawLeftBorder = true,
   });
 
   final List<String> labels;
-  final List<double> incomes;   // 正
-  final List<double> expenses;  // 既に負で渡す
-  final List<double> balances;
+  final List<double> incomes;
+  final List<double> expenses; // negative
+  final List<double> balances; // cumulative
   final double maxAbsY;
   final double labelAngleDeg;
   final int labelStep;
 
-  static const double _leftReserved = 44;
-  double get _bottomReserved => labelAngleDeg == 0 ? 24 : 40;
+  final bool showLeftAxis;
+  final double leftReserved;
+  final double bottomReserved;
+  final bool drawLeftBorder;
 
   @override
   Widget build(BuildContext context) {
@@ -430,8 +517,6 @@ class _UnifiedLineChart extends StatelessWidget {
             isStrokeCapRound: false,
           ),
     ];
-
-    // 折れ線
     final balanceLine = LineChartBarData(
       spots: [for (int i = 0; i < labels.length; i++) FlSpot(i.toDouble(), balances[i])],
       isCurved: false,
@@ -459,26 +544,19 @@ class _UnifiedLineChart extends StatelessWidget {
       );
     }
 
+    final nf = NumberFormat('#,###');
+
     return LineChart(
       LineChartData(
-        minX: 0,
-        maxX: labels.length - 1,
+        // 左右端が切れないよう 0.5 ずつ広げる
+        minX: -0.5,
+        maxX: labels.length - 0.5,
         minY: -maxAbsY,
         maxY: maxAbsY,
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (value) =>
-              FlLine(strokeWidth: 0.5, color: Colors.black12),
-        ),
-        borderData: FlBorderData(
-          show: true,
-          border: const Border(
-            top: BorderSide(color: Colors.black12, width: 1),
-            right: BorderSide(color: Colors.black12, width: 1),
-            left: BorderSide(color: Colors.black12, width: 1),
-            bottom: BorderSide(color: Colors.black12, width: 1),
-          ),
+          getDrawingHorizontalLine: (v) => FlLine(strokeWidth: 0.5, color: Colors.black12),
         ),
         titlesData: FlTitlesData(
           topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -486,21 +564,54 @@ class _UnifiedLineChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: _bottomReserved,
-              interval: 1, // ここが効く：整数インデックスのみに固定
+              reservedSize: bottomReserved,
+              interval: 1, // 整数インデックスだけ
               getTitlesWidget: bottomTitle,
             ),
           ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: _leftReserved,
+              showTitles: showLeftAxis,
+              reservedSize: showLeftAxis ? leftReserved : 0,
               getTitlesWidget: (v, _) =>
                   Text(NumberFormat.compact().format(v), style: const TextStyle(fontSize: 10)),
             ),
           ),
         ),
-        lineTouchData: LineTouchData(enabled: false),
+        borderData: FlBorderData(
+          show: true,
+          border: Border(
+            top: const BorderSide(color: Colors.black12, width: 1),
+            right: const BorderSide(color: Colors.black12, width: 1),
+            left: BorderSide(
+              color: drawLeftBorder ? Colors.black12 : Colors.transparent,
+              width: 1,
+            ),
+            bottom: const BorderSide(color: Colors.black12, width: 1),
+          ),
+        ),
+        // ツールチップ（同じxの 収入/支出/累計 を1つにまとめて表示）
+        lineTouchData: LineTouchData(
+          enabled: true,
+          handleBuiltInTouches: true,
+          touchSpotThreshold: 24,
+          touchTooltipData: LineTouchTooltipData(
+            fitInsideHorizontally: true,
+            fitInsideVertically: true,
+            tooltipBgColor: Colors.black87,
+            getTooltipItems: (touchedSpots) {
+              if (touchedSpots.isEmpty) return const [];
+              final idx = touchedSpots.first.x.round().clamp(0, labels.length - 1);
+              final parts = <String>[];
+              if (incomes[idx] != 0) parts.add('収入: ${nf.format(incomes[idx])}');
+              if (expenses[idx] != 0) parts.add('支出: ${nf.format(-expenses[idx])}');
+              parts.add('収支(累計): ${nf.format(balances[idx])}');
+              final text = '${labels[idx]}\n${parts.join('\n')}';
+              final item = LineTooltipItem(text, const TextStyle(color: Colors.white));
+              return [for (int i = 0; i < touchedSpots.length; i++) i == 0 ? item : null];
+            },
+          ),
+        ),
         lineBarsData: [
           ...incomeBars,
           ...expenseBars,
@@ -513,8 +624,8 @@ class _UnifiedLineChart extends StatelessWidget {
 
 class ChartData {
   ChartData(this.date, this.income, this.expense, this.balance);
-  final String date;
-  final int income;
-  final int expense;
-  final int balance;
+  final String date;   // ラベル（MM/dd, yy/MM, yyyy）
+  final int income;    // 正
+  final int expense;   // 正（集計時に負に変換）
+  final int balance;   // 単月/日/年の差分（表示では使わないが残しておく）
 }
