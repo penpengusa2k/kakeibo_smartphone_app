@@ -1,16 +1,14 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:syncfusion_flutter_charts/charts.dart' as charts;
+import 'package:fl_chart/fl_chart.dart';
+
 import 'package:kakeibo_smartphone_app/viewmodels/transaction_viewmodel.dart';
 import 'package:kakeibo_smartphone_app/models/transaction.dart';
-import 'package:flutter/cupertino.dart';
 
-enum Period {
-  day,
-  month,
-  year,
-}
+enum Period { day, month, year }
 
 class BalanceAnalysisPage extends StatefulWidget {
   const BalanceAnalysisPage({super.key});
@@ -20,41 +18,64 @@ class BalanceAnalysisPage extends StatefulWidget {
 }
 
 class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
-  DateTime _focusedDate = DateTime.now();
+  DateTime _startDate;
+  DateTime _endDate;
   Period _selectedPeriod = Period.month;
+
+  _BalanceAnalysisPageState()
+      : _startDate = DateTime.now(),
+        _endDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    _updateDateRange();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
+  void _updateDateRange() {
+    final now = DateTime.now();
+    setState(() {
+      switch (_selectedPeriod) {
+        case Period.day:
+          _startDate = DateTime(now.year, now.month, now.day)
+              .subtract(const Duration(days: 7));
+          _endDate = DateTime(now.year, now.month, now.day);
+          break;
+        case Period.month:
+          _startDate = DateTime(now.year, now.month - 6, 1);
+          _endDate   = DateTime(now.year, now.month + 1, 0); // 月末
+          break;
+        case Period.year:
+          _startDate = DateTime(now.year - 2, 1, 1);
+          _endDate   = DateTime(now.year, 12, 31);           // 年末
+          break;
+      }
+    });
   }
 
-  // 日付選択ダイアログ
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+    final pickedRange = await showDateRangePicker(
       context: context,
-      initialDate: _focusedDate,
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (picked != null && picked != _focusedDate) {
+    if (!mounted) return;
+    if (pickedRange != null) {
       setState(() {
-        _focusedDate = picked;
+        _startDate = pickedRange.start;
+        _endDate = pickedRange.end;
       });
     }
   }
 
-  // 期間選択ダイアログ (月・年)
   Future<void> _selectPeriod(BuildContext context) async {
     final now = DateTime.now();
-    int selectedYear = _focusedDate.year;
-    int selectedMonth = _focusedDate.month;
+    int selectedYear = _startDate.year;
+    int selectedMonth = _startDate.month;
 
-    await showDialog(
+    final result = await showDialog<DateTime>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -66,34 +87,37 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
               children: [
                 Expanded(
                   child: CupertinoPicker(
-                    scrollController: FixedExtentScrollController(
-                        initialItem: selectedYear - 2000),
+                    scrollController:
+                        FixedExtentScrollController(initialItem: selectedYear - 2000),
                     itemExtent: 40.0,
                     onSelectedItemChanged: (int index) {
                       selectedYear = 2000 + index;
                     },
                     children: List<Widget>.generate(
-                        now.year - 2000 + 2, (int index) {
-                      return Center(
-                          child: Text('${2000 + index}年',
-                              style: const TextStyle(fontSize: 20)));
-                    }),
+                      now.year - 2000 + 2,
+                      (int index) => Center(
+                        child: Text('${2000 + index}年',
+                            style: const TextStyle(fontSize: 20)),
+                      ),
+                    ),
                   ),
                 ),
                 if (_selectedPeriod != Period.year)
                   Expanded(
                     child: CupertinoPicker(
-                      scrollController: FixedExtentScrollController(
-                          initialItem: selectedMonth - 1),
+                      scrollController:
+                          FixedExtentScrollController(initialItem: selectedMonth - 1),
                       itemExtent: 40.0,
                       onSelectedItemChanged: (int index) {
                         selectedMonth = index + 1;
                       },
-                      children: List<Widget>.generate(12, (int index) {
-                        return Center(
-                            child: Text('${index + 1}月',
-                                style: const TextStyle(fontSize: 20)));
-                      }),
+                      children: List<Widget>.generate(
+                        12,
+                        (int index) => Center(
+                          child: Text('${index + 1}月',
+                              style: const TextStyle(fontSize: 20)),
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -104,26 +128,17 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
               onPressed: () => Navigator.of(context).pop(DateTime.now()),
               child: const Text('今月へ戻る'),
             ),
-            const Spacer(),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('キャンセル'),
             ),
             TextButton(
               onPressed: () {
-                final oneYearLater = DateTime(now.year + 1, now.month, 1);
                 DateTime selectedDate;
                 if (_selectedPeriod == Period.year) {
                   selectedDate = DateTime(selectedYear, 1, 1);
                 } else {
                   selectedDate = DateTime(selectedYear, selectedMonth);
-                }
-
-                if (selectedDate.isAfter(oneYearLater)) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('1年後より未来の期間は選択できません')),
-                  );
-                  return;
                 }
                 Navigator.of(context).pop(selectedDate);
               },
@@ -132,243 +147,212 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
           ],
         );
       },
-    ).then((pickedDate) {
-      if (pickedDate != null && pickedDate is DateTime) {
-        if (!mounted) return;
-        setState(() {
-          _focusedDate = pickedDate;
-        });
-      }
-    });
+    );
+
+    if (!mounted) return;
+    if (result != null) {
+      setState(() {
+        if (_selectedPeriod == Period.year) {
+          _startDate = DateTime(result.year, 1, 1);
+          _endDate   = DateTime(result.year, 12, 31);
+        } else {
+          _startDate = DateTime(result.year, result.month, 1);
+          _endDate   = DateTime(result.year, result.month + 1, 0);
+        }
+      });
+    }
   }
 
-  // 期間に応じたチャートデータを取得
   List<ChartData> _getChartData(List<Transaction> transactions) {
-    Map<DateTime, Map<String, int>> aggregatedData = {};
+    final Map<String, Map<String, int>> aggregatedData = {};
 
-    for (var t in transactions) {
-      DateTime keyDate;
+    final filtered = transactions.where((t) {
+      return t.date.isAfter(_startDate.subtract(const Duration(days: 1))) &&
+             t.date.isBefore(_endDate.add(const Duration(days: 1)));
+    }).toList();
+
+    for (var t in filtered) {
+      String keyDate;
       switch (_selectedPeriod) {
         case Period.day:
-          keyDate = DateTime(t.date.year, t.date.month, t.date.day);
+          keyDate = DateFormat('MM/dd').format(t.date);
           break;
         case Period.month:
-          keyDate = DateTime(t.date.year, t.date.month, 1);
+          keyDate = DateFormat('yy/MM').format(t.date);
           break;
         case Period.year:
-          keyDate = DateTime(t.date.year, 1, 1);
+          keyDate = DateFormat('yyyy').format(t.date);
           break;
       }
       aggregatedData.putIfAbsent(keyDate, () => {'income': 0, 'expense': 0});
       if (t.type == 'income') {
         aggregatedData[keyDate]!['income'] =
-            aggregatedData[keyDate]!['income']! + t.amount;
+            (aggregatedData[keyDate]!['income'] ?? 0) + t.amount;
       } else {
         aggregatedData[keyDate]!['expense'] =
-            aggregatedData[keyDate]!['expense']! + t.amount;
+            (aggregatedData[keyDate]!['expense'] ?? 0) + t.amount;
       }
     }
 
-    // キーを日付としてソート
-    final sortedKeys = aggregatedData.keys.toList()
-      ..sort((a, b) => a.compareTo(b));
+    // 期間内のラベル（Xは index）
+    final List<String> dateKeys = [];
+    DateTime cur = _startDate;
+    while (cur.isBefore(_endDate) || cur.isAtSameMomentAs(_endDate)) {
+      switch (_selectedPeriod) {
+        case Period.day:
+          dateKeys.add(DateFormat('MM/dd').format(cur));
+          cur = cur.add(const Duration(days: 1));
+          break;
+        case Period.month:
+          dateKeys.add(DateFormat('yy/MM').format(cur));
+          cur = DateTime(cur.year, cur.month + 1, 1);
+          break;
+        case Period.year:
+          dateKeys.add(DateFormat('yyyy').format(cur));
+          cur = DateTime(cur.year + 1, 1, 1);
+          break;
+      }
+    }
 
-    // ChartDataのリストを作成
-    return sortedKeys.map((keyDate) {
-      final income = aggregatedData[keyDate]!['income']!;
-      final expense =
-          aggregatedData.containsKey(keyDate) ? aggregatedData[keyDate]!['expense']! : 0;
+    return dateKeys.map((key) {
+      final income  = aggregatedData[key]?['income']  ?? 0;
+      final expense = aggregatedData[key]?['expense'] ?? 0;
       final balance = income - expense;
-
-      return ChartData(keyDate, income, expense, balance);
+      return ChartData(key, income, expense, balance);
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final transactionViewModel = Provider.of<TransactionViewModel>(context);
-    final List<ChartData> chartData =
-        _getChartData(transactionViewModel.transactions);
+    final transactions = context.select<TransactionViewModel, List<Transaction>>(
+      (vm) => vm.transactions,
+    );
+    final data = _getChartData(transactions);
 
-    List<ChartData> displayedChartData = chartData;
-
-    // X軸のフォーマット
-    String xAxisLabelFormat;
+    String dateRangeText;
     if (_selectedPeriod == Period.day) {
-      xAxisLabelFormat = 'MM/dd';
+      dateRangeText =
+          '${DateFormat('yyyy年MM月dd日').format(_startDate)} - ${DateFormat('yyyy年MM月dd日').format(_endDate)}';
     } else if (_selectedPeriod == Period.month) {
-      xAxisLabelFormat = 'yy/MM';
+      dateRangeText =
+          '${DateFormat('yyyy年MM月').format(_startDate)} - ${DateFormat('yyyy年MM月').format(_endDate)}';
     } else {
-      xAxisLabelFormat = 'yyyy';
+      dateRangeText =
+          '${DateFormat('yyyy年').format(_startDate)} - ${DateFormat('yyyy年').format(_endDate)}';
+    }
+
+    // Y軸レンジ（±対称）
+    double maxAbsValue = 0;
+    for (final d in data) {
+      maxAbsValue = max(maxAbsValue, d.income.abs().toDouble());
+      maxAbsValue = max(maxAbsValue, d.expense.abs().toDouble());
+      maxAbsValue = max(maxAbsValue, d.balance.abs().toDouble());
+    }
+    maxAbsValue = (maxAbsValue == 0 ? 1000 : maxAbsValue * 1.1);
+
+    // ラベル回転・間引き
+    double labelAngleDeg = 0;
+    int labelStep = 1;
+    if (_selectedPeriod == Period.day) {
+      labelAngleDeg = -45;
+      if (data.length > 10) labelStep = 2;
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('収支分析'),
-      ),
+      appBar: AppBar(title: const Text('収支分析')),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 期間選択トグルボタン
-                Center(
-                  child: ToggleButtons(
-                    isSelected: Period.values
-                        .map((period) => _selectedPeriod == period)
-                        .toList(),
-                    onPressed: (int index) {
-                      setState(() {
-                        _selectedPeriod = Period.values[index];
-                        _focusedDate = DateTime.now();
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(8.0),
-                    children: const <Widget>[
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text('日'),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text('月'),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text('年'),
-                      ),
-                    ],
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            children: [
+              Center(
+                child: ToggleButtons(
+                  isSelected: Period.values.map((p) => _selectedPeriod == p).toList(),
+                  onPressed: (int index) {
+                    setState(() {
+                      _selectedPeriod = Period.values[index];
+                      _updateDateRange();
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  children: const [
+                    Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('日')),
+                    Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('月')),
+                    Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('年')),
+                  ],
                 ),
-                const SizedBox(height: 16.0),
-                // 期間ナビゲーション
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            if (_selectedPeriod == Period.day) {
-                              _focusedDate =
-                                  _focusedDate.subtract(const Duration(days: 1));
-                            } else if (_selectedPeriod == Period.month) {
-                              _focusedDate = DateTime(
-                                  _focusedDate.year, _focusedDate.month - 1, _focusedDate.day);
-                            } else {
-                              _focusedDate = DateTime(
-                                  _focusedDate.year - 1, _focusedDate.month, _focusedDate.day);
-                            }
-                          });
-                        },
-                        icon: const Icon(Icons.arrow_back_ios),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          if (_selectedPeriod == Period.day) {
-                            _selectDate(context);
-                          } else if (_selectedPeriod == Period.month ||
-                              _selectedPeriod == Period.year) {
-                            _selectPeriod(context);
-                          }
-                        },
-                        child: Text(
-                          _selectedPeriod == Period.day
-                              ? DateFormat('yyyy年MM月dd日').format(_focusedDate)
-                              : _selectedPeriod == Period.month
-                                  ? DateFormat('yyyy年MM月').format(_focusedDate)
-                                  : DateFormat('yyyy年').format(_focusedDate),
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            if (_selectedPeriod == Period.day) {
-                              _focusedDate = _focusedDate.add(const Duration(days: 1));
-                            } else if (_selectedPeriod == Period.month) {
-                              _focusedDate = DateTime(
-                                  _focusedDate.year, _focusedDate.month + 1, _focusedDate.day);
-                            } else {
-                              _focusedDate = DateTime(
-                                  _focusedDate.year + 1, _focusedDate.month, _focusedDate.day);
-                            }
-                          });
-                        },
-                        icon: const Icon(Icons.arrow_forward_ios),
-                      ),
-                    ],
-                  ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () {
+                  if (_selectedPeriod == Period.day) {
+                    _selectDate(context);
+                  } else {
+                    _selectPeriod(context);
+                  }
+                },
+                child: Text(
+                  dateRangeText,
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16.0),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Text(
-                          _selectedPeriod == Period.day
-                              ? '日別収支トレンド'
-                              : _selectedPeriod == Period.month
-                                  ? '月別収支トレンド'
-                                  : '年別収支トレンド',
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(
-                          height: 300,
-                          child: charts.SfCartesianChart(
-                            enableAxisAnimation: false,
-                            primaryXAxis: charts.DateTimeAxis(
-                              dateFormat: DateFormat(xAxisLabelFormat),
-                              intervalType: charts.DateTimeIntervalType.auto,
-                            ),
-                            series: <charts.CartesianSeries>[
-                              // 収入の棒グラフ
-                              charts.ColumnSeries<ChartData, DateTime>(
-                                dataSource: displayedChartData,
-                                xValueMapper: (ChartData data, _) => data.date,
-                                yValueMapper: (ChartData data, _) => data.income,
-                                name: '収入',
-                                color: Colors.green,
-                                animationDuration: 0,
-                              ),
-                              // 支出の棒グラフ (yValueMapperに負の値を使用)
-                              charts.ColumnSeries<ChartData, DateTime>(
-                                dataSource: displayedChartData,
-                                xValueMapper: (ChartData data, _) => data.date,
-                                yValueMapper: (ChartData data, _) => -data.expense,
-                                name: '支出',
-                                color: Colors.red,
-                                animationDuration: 0,
-                              ),
-                              // 収支の折れ線グラフ
-                              charts.LineSeries<ChartData, DateTime>(
-                                dataSource: displayedChartData,
-                                xValueMapper: (ChartData data, _) => data.date,
-                                yValueMapper: (ChartData data, _) => data.balance,
-                                name: '収支',
-                                color: Colors.blue,
-                                pointColorMapper: (ChartData data, _) {
-                                  return data.balance >= 0 ? Colors.green : Colors.red;
-                                },
-                                markerSettings: const charts.MarkerSettings(isVisible: true),
-                                dataLabelSettings: const charts.DataLabelSettings(isVisible: true),
-                                animationDuration: 0,
-                              ),
-                            ],
+              ),
+              const SizedBox(height: 16),
+              // 凡例
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  _LegendDot(color: Colors.green, label: '収入'),
+                  SizedBox(width: 12),
+                  _LegendDot(color: Colors.red, label: '支出'),
+                  SizedBox(width: 12),
+                  _LegendDot(color: Colors.blue, label: '収支'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    height: 300,
+                    width: double.infinity,
+                    child: data.isEmpty
+                        ? const Center(child: Text('データがありません'))
+                        : LayoutBuilder(
+                            builder: (context, constraints) {
+                              // 1点あたりの横幅（お好みで調整）
+                              final step = _selectedPeriod == Period.day
+                                  ? 56.0
+                                  : (_selectedPeriod == Period.month ? 72.0 : 100.0);
+
+                              final contentWidth =
+                                  max(constraints.maxWidth, data.length * step);
+
+                              return SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                child: SizedBox(
+                                  width: contentWidth,
+                                  child: _UnifiedLineChart(
+                                    labels: data.map((e) => e.date).toList(),
+                                    incomes:
+                                        data.map((e) => e.income.toDouble()).toList(),
+                                    expenses:
+                                        data.map((e) => (-e.expense).toDouble()).toList(),
+                                    balances:
+                                        data.map((e) => e.balance.toDouble()).toList(),
+                                    maxAbsY: maxAbsValue,
+                                    labelAngleDeg: labelAngleDeg,
+                                    labelStep: labelStep,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -376,9 +360,160 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
   }
 }
 
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label),
+      ],
+    );
+  }
+}
+
+class _UnifiedLineChart extends StatelessWidget {
+  const _UnifiedLineChart({
+    required this.labels,
+    required this.incomes,
+    required this.expenses,
+    required this.balances,
+    required this.maxAbsY,
+    required this.labelAngleDeg,
+    required this.labelStep,
+  });
+
+  final List<String> labels;
+  final List<double> incomes;   // 正
+  final List<double> expenses;  // 既に負で渡す
+  final List<double> balances;
+  final double maxAbsY;
+  final double labelAngleDeg;
+  final int labelStep;
+
+  static const double _leftReserved = 44;
+  double get _bottomReserved => labelAngleDeg == 0 ? 24 : 40;
+
+  @override
+  Widget build(BuildContext context) {
+    // 棒（縦線分）
+    final incomeBars = <LineChartBarData>[
+      for (int i = 0; i < labels.length; i++)
+        if (incomes[i] != 0)
+          LineChartBarData(
+            spots: [FlSpot(i.toDouble(), 0), FlSpot(i.toDouble(), incomes[i])],
+            isCurved: false,
+            color: Colors.green,
+            barWidth: 12,
+            dotData: FlDotData(show: false),
+            isStrokeCapRound: false,
+          ),
+    ];
+    final expenseBars = <LineChartBarData>[
+      for (int i = 0; i < labels.length; i++)
+        if (expenses[i] != 0)
+          LineChartBarData(
+            spots: [FlSpot(i.toDouble(), 0), FlSpot(i.toDouble(), expenses[i])],
+            isCurved: false,
+            color: Colors.red,
+            barWidth: 12,
+            dotData: FlDotData(show: false),
+            isStrokeCapRound: false,
+          ),
+    ];
+
+    // 折れ線
+    final balanceLine = LineChartBarData(
+      spots: [for (int i = 0; i < labels.length; i++) FlSpot(i.toDouble(), balances[i])],
+      isCurved: false,
+      color: Colors.blue,
+      barWidth: 2,
+      dotData: FlDotData(show: true),
+    );
+
+    // X軸タイトル（整数目盛のみ + 間引き）
+    Widget bottomTitle(double value, TitleMeta meta) {
+      const eps = 0.0001;
+      if ((value - value.roundToDouble()).abs() > eps) {
+        return const SizedBox.shrink();
+      }
+      final idx = value.toInt();
+      if (idx < 0 || idx >= labels.length) return const SizedBox.shrink();
+      if (idx % labelStep != 0) return const SizedBox.shrink();
+      return SideTitleWidget(
+        axisSide: meta.axisSide,
+        space: 6,
+        child: Transform.rotate(
+          angle: labelAngleDeg * pi / 180.0,
+          child: Text(labels[idx], style: const TextStyle(fontSize: 10)),
+        ),
+      );
+    }
+
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: labels.length - 1,
+        minY: -maxAbsY,
+        maxY: maxAbsY,
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (value) =>
+              FlLine(strokeWidth: 0.5, color: Colors.black12),
+        ),
+        borderData: FlBorderData(
+          show: true,
+          border: const Border(
+            top: BorderSide(color: Colors.black12, width: 1),
+            right: BorderSide(color: Colors.black12, width: 1),
+            left: BorderSide(color: Colors.black12, width: 1),
+            bottom: BorderSide(color: Colors.black12, width: 1),
+          ),
+        ),
+        titlesData: FlTitlesData(
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: _bottomReserved,
+              interval: 1, // ここが効く：整数インデックスのみに固定
+              getTitlesWidget: bottomTitle,
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: _leftReserved,
+              getTitlesWidget: (v, _) =>
+                  Text(NumberFormat.compact().format(v), style: const TextStyle(fontSize: 10)),
+            ),
+          ),
+        ),
+        lineTouchData: LineTouchData(enabled: false),
+        lineBarsData: [
+          ...incomeBars,
+          ...expenseBars,
+          balanceLine,
+        ],
+      ),
+    );
+  }
+}
+
 class ChartData {
   ChartData(this.date, this.income, this.expense, this.balance);
-  final DateTime date;
+  final String date;
   final int income;
   final int expense;
   final int balance;
