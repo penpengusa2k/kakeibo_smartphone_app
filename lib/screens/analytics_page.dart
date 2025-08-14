@@ -25,6 +25,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   _ViewType _viewType = _ViewType.month;
   late PageController _pageController;
 
+  bool _showSwipeHint = true;
+  bool _userInteracted = false;
+
   static const List<Color> _gentleColors = [
     Color(0xFFE57373), // Red 300
     Color(0xFF64B5F6), // Blue 300
@@ -53,22 +56,49 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   int _calculateInitialPage() {
     final now = DateTime.now();
     if (_viewType == _ViewType.month) {
-      return (now.year - 2000) * 12 + now.month -1;
+      return (now.year - 2000) * 12 + now.month - 1;
     } else {
       return now.year - 2000;
     }
   }
 
+  // 新しいタイマー開始メソッド
+  void _startSwipeHintTimer() {
+    // 既にユーザー操作があった場合はヒントを表示しない
+    if (_userInteracted) {
+      return;
+    }
+
+    // ヒントを true に設定し、タイマーを開始
+    setState(() {
+      _showSwipeHint = true;
+    });
+  }
+
   void _onPageChanged(int page) {
     setState(() {
+      DateTime newFocusedDate;
       if (_viewType == _ViewType.month) {
         final year = 2000 + page ~/ 12;
         final month = page % 12 + 1;
-        _focusedDate = DateTime(year, month);
+        newFocusedDate = DateTime(year, month);
       } else {
         final year = 2000 + page;
-        _focusedDate = DateTime(year);
+        newFocusedDate = DateTime(year);
       }
+
+      // ページ遷移＝ユーザー操作とみなし、ヒントを消す
+      if (!_userInteracted) {
+        _userInteracted = true;
+        _showSwipeHint = false; // ここで _showSwipeHint を false に戻す
+      }
+
+      // 現在のページが分析画面のページになったらタイマーを開始
+      if (_calculateInitialPageFromDate(newFocusedDate) == page) {
+        _startSwipeHintTimer();
+      }
+
+      _focusedDate = newFocusedDate;
     });
   }
 
@@ -96,7 +126,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       onSelectedItemChanged: (int index) {
                         selectedYear = 2000 + index;
                       },
-                      children: List<Widget>.generate(now.year - 2000 + 2, (int index) { // 来年まで表示
+                      children: List<Widget>.generate(
+                          DateTime.now().year - 2000 + 2, (int index) {
                         return Center(
                             child: Text('${2000 + index}年',
                                 style: const TextStyle(fontSize: 20)));
@@ -135,7 +166,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 onPressed: () {
                   final oneYearLater = DateTime(now.year + 1, now.month, 1);
                   final selectedDate = DateTime(selectedYear, selectedMonth);
-                  if (selectedDate.isAfter(oneYearLater)) { // 1年後より未来は選択不可
+                  if (selectedDate.isAfter(oneYearLater)) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('1年後より未来の月は選択できません')),
                     );
@@ -152,7 +183,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         if (pickedDate != null && pickedDate is DateTime) {
           setState(() {
             _focusedDate = pickedDate;
-            _pageController.jumpToPage(_calculateInitialPageFromDate(pickedDate));
+            _pageController
+                .jumpToPage(_calculateInitialPageFromDate(pickedDate));
           });
         }
       });
@@ -173,7 +205,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 onSelectedItemChanged: (int index) {
                   selectedYear = 2000 + index;
                 },
-                children: List<Widget>.generate(now.year - 2000 + 2, (int index) { // 来年まで表示
+                children: List<Widget>.generate(DateTime.now().year - 2000 + 2,
+                    (int index) {
                   return Center(
                       child: Text('${2000 + index}年',
                           style: const TextStyle(fontSize: 20)));
@@ -181,7 +214,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               ),
             ),
             actions: <Widget>[
-               TextButton(
+              TextButton(
                 child: const Text('今年へ戻る'),
                 onPressed: () => Navigator.of(context).pop(DateTime.now()),
               ),
@@ -192,7 +225,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               ),
               TextButton(
                 onPressed: () {
-                   final oneYearLater = DateTime(now.year + 1);
+                  final oneYearLater = DateTime(now.year + 1);
                   final selectedDate = DateTime(selectedYear);
                   if (selectedDate.isAfter(oneYearLater)) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -211,7 +244,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         if (pickedDate != null && pickedDate is DateTime) {
           setState(() {
             _focusedDate = pickedDate;
-             _pageController.jumpToPage(_calculateInitialPageFromDate(pickedDate));
+            _pageController
+                .jumpToPage(_calculateInitialPageFromDate(pickedDate));
           });
         }
       });
@@ -226,26 +260,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
   }
 
-  List<Transaction> _getFilteredTransactions(List<Transaction> allTransactions) {
-    return allTransactions.where((t) {
-      bool isInPeriod;
-      if (_viewType == _ViewType.month) {
-        isInPeriod = t.date.year == _focusedDate.year && t.date.month == _focusedDate.month;
-      } else {
-        isInPeriod = t.date.year == _focusedDate.year;
-      }
-      final isTypeSelected = t.type == _selectedTransactionType;
-      return isInPeriod && isTypeSelected;
-    }).toList();
-  }
-  
+
   Map<String, int> _calculateSummary(List<Transaction> allTransactions) {
     int totalIncome = 0;
     int totalExpense = 0;
-    
+
     final transactionsInPeriod = allTransactions.where((t) {
-       if (_viewType == _ViewType.month) {
-        return t.date.year == _focusedDate.year && t.date.month == _focusedDate.month;
+      if (_viewType == _ViewType.month) {
+        return t.date.year == _focusedDate.year &&
+            t.date.month == _focusedDate.month;
       } else {
         return t.date.year == _focusedDate.year;
       }
@@ -284,7 +307,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const BalanceAnalysisPage()),
+              MaterialPageRoute(
+                  builder: (context) => const BalanceAnalysisPage()),
             );
           },
         ),
@@ -294,15 +318,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 透明なアイコンを左に置いて、テキストが中央に来るように調整
               const Opacity(
                 opacity: 0,
                 child: Icon(Icons.arrow_drop_down),
               ),
               Text(
-                _viewType == _ViewType.month 
-                  ? DateFormat('yyyy年MM月').format(_focusedDate)
-                  : DateFormat('yyyy年').format(_focusedDate),
+                _viewType == _ViewType.month
+                    ? DateFormat('yyyy年MM月').format(_focusedDate)
+                    : DateFormat('yyyy年').format(_focusedDate),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const Icon(Icons.arrow_drop_down)
@@ -313,18 +336,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         actions: [
           IconButton(
             icon: SizedBox(
-              width: 48, // Stackの領域を確保
+              width: 48,
               height: 48,
               child: Stack(
-                clipBehavior: Clip.none, // はみ出した部分も表示する
+                clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  // 非選択のものを先に描画 (奥)
                   if (_viewType == _ViewType.month)
                     _buildAnimatedView('年', false)
                   else
                     _buildAnimatedView('月', false),
-                  // 選択中のものを後に描画 (手前)
                   if (_viewType == _ViewType.month)
                     _buildAnimatedView('月', true)
                   else
@@ -335,13 +356,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             tooltip: '月/年 表示の切り替え',
             onPressed: () {
               setState(() {
-                _viewType = _viewType == _ViewType.month ? _ViewType.year : _ViewType.month;
+                _viewType = _viewType == _ViewType.month
+                    ? _ViewType.year
+                    : _ViewType.month;
                 _focusedDate = DateTime.now();
                 _pageController.jumpToPage(_calculateInitialPage());
               });
             },
           ),
-          const SizedBox(width: 8), // 右端に余白を追加
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
@@ -362,64 +385,65 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ),
           ),
           // タイプ選択 (支出/収入トグル)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const double borderWidth = 1.0;
-              final double buttonWidth = (constraints.maxWidth - (borderWidth * 3)) / 2;
-              return ToggleButtons(
-                onPressed: (index) {
-                  setState(() {
-                    _selectedTransactionType = index == 0 ? 'expense' : 'income';
-                  });
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 0.0), // 上に8.0、下に0.0のパディング
+            child: Center(
+              child: CupertinoSlidingSegmentedControl<String>(
+                groupValue: _selectedTransactionType,
+                onValueChanged: (String? value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedTransactionType = value;
+                    });
+                  }
                 },
-                fillColor: _selectedTransactionType == 'expense'
-                    ? Colors.red.shade100
-                    : Colors.green.shade100,
-                selectedColor: _selectedTransactionType == 'expense'
-                    ? Colors.red.shade800
-                    : Colors.green.shade800,
-                color: Colors.black87,
-                borderColor: Colors.grey.shade400,
-                selectedBorderColor: _selectedTransactionType == 'expense'
-                    ? Colors.red.shade700
-                    : Colors.green.shade700,
-                borderRadius: BorderRadius.circular(8.0),
-                borderWidth: borderWidth,
-                renderBorder: true,
-                isSelected: [
-                  _selectedTransactionType == 'expense',
-                  _selectedTransactionType == 'income'
-                ],
-                children: [
-                  SizedBox(
-                    width: buttonWidth,
-                    child: const Center(child: Text('支出')),
+                children: const <String, Widget>{
+                  'expense': Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Text('支出'),
                   ),
-                  SizedBox(
-                    width: buttonWidth,
-                    child: const Center(child: Text('収入')),
+                  'income': Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Text('収入'),
                   ),
-                ],
-              );
-            },
+                },
+              ),
+            ),
           ),
           Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              itemBuilder: (context, page) {
-                DateTime currentDate;
-                 if (_viewType == _ViewType.month) {
-                  final year = 2000 + page ~/ 12;
-                  final month = page % 12 + 1;
-                  currentDate = DateTime(year, month);
-                } else {
-                  final year = 2000 + page;
-                  currentDate = DateTime(year);
+            // PointerDownでユーザー操作を検知してヒントを消す
+            child: Listener(
+              onPointerDown: (_) {
+                if (!_userInteracted) {
+                  setState(() {
+                    _userInteracted = true;
+                    _showSwipeHint = false; // ここで _showSwipeHint を false に戻す
+                  });
                 }
-                return _buildChartPage(context, transactionViewModel, currentDate);
               },
-            )
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                itemBuilder: (context, page) {
+                  DateTime currentDate;
+                  if (_viewType == _ViewType.month) {
+                    final year = 2000 + page ~/ 12;
+                    final month = page % 12 + 1;
+                    currentDate = DateTime(year, month);
+                  } else {
+                    final year = 2000 + page;
+                    currentDate = DateTime(year);
+                  }
+                  return _buildChartPage(
+                    context,
+                    transactionViewModel,
+                    currentDate,
+                    // グラフ上のヒント表示はここから制御
+                    showSwipeHint: _showSwipeHint && !_userInteracted,
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
@@ -433,12 +457,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         const SizedBox(height: 4),
         Text(
           '${Formatter.formatAmount(amount)}円',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+          style: TextStyle(
+              fontSize: 18, fontWeight: FontWeight.bold, color: color),
         ),
       ],
     );
   }
-  
+
   Widget _buildAnimatedView(String text, bool isSelected) {
     final Color activeColor = Colors.orange.shade700; // 少し濃いオレンジ
     final Color? inactiveColor = Theme.of(context).textTheme.titleLarge?.color;
@@ -452,7 +477,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
         child: AnimatedAlign(
-          alignment: isSelected ? Alignment.center : const Alignment(3.5, -3.5), // さらに離す
+          alignment: isSelected ? Alignment.center : const Alignment(3.5, -3.5),
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
           child: Stack(
@@ -464,7 +489,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 color: isSelected ? activeColor : inactiveColor,
               ),
               Padding(
-                padding: const EdgeInsets.only(top: 8.0), // さらに下にずらす
+                padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
                   text,
                   style: TextStyle(
@@ -481,23 +506,73 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  Widget _buildChartPage(BuildContext context, TransactionViewModel transactionViewModel, DateTime currentDate) {
-    
-    final allTagsEver = transactionViewModel.transactions
-        .where((t) => t.type == _selectedTransactionType)
+  Widget _buildChartPage(
+    BuildContext context,
+    TransactionViewModel transactionViewModel,
+    DateTime currentDate, {
+    required bool showSwipeHint,
+  }) {
+    return _ChartPageContent(
+      transactionViewModel: transactionViewModel,
+      currentDate: currentDate,
+      selectedTransactionType: _selectedTransactionType,
+      focusedDate: _focusedDate,
+      viewType: _viewType,
+      gentleColors: _gentleColors,
+      showSwipeHint: showSwipeHint,
+    );
+  }
+}
+
+class _ChartPageContent extends StatefulWidget {
+  final TransactionViewModel transactionViewModel;
+  final DateTime currentDate;
+  final String selectedTransactionType;
+  final DateTime focusedDate;
+  final _ViewType viewType;
+  final List<Color> gentleColors;
+  final bool showSwipeHint;
+
+  const _ChartPageContent({
+    required this.transactionViewModel,
+    required this.currentDate,
+    required this.selectedTransactionType,
+    required this.focusedDate,
+    required this.viewType,
+    required this.gentleColors,
+    required this.showSwipeHint,
+  });
+
+  @override
+  State<_ChartPageContent> createState() => _ChartPageContentState();
+}
+
+class _ChartPageContentState extends State<_ChartPageContent>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // Important for AutomaticKeepAliveClientMixin
+
+    final allTagsEver = widget.transactionViewModel.transactions
+        .where((t) => t.type == widget.selectedTransactionType)
         .map((t) => t.tag)
         .toSet()
         .toList()
       ..sort();
 
-    final filteredTransactions = transactionViewModel.transactions.where((t) {
+    final filteredTransactions =
+        widget.transactionViewModel.transactions.where((t) {
       bool isInPeriod;
-      if (_viewType == _ViewType.month) {
-        isInPeriod = t.date.year == currentDate.year && t.date.month == currentDate.month;
+      if (widget.viewType == _ViewType.month) {
+        isInPeriod = t.date.year == widget.currentDate.year &&
+            t.date.month == widget.currentDate.month;
       } else {
-        isInPeriod = t.date.year == currentDate.year;
+        isInPeriod = t.date.year == widget.currentDate.year;
       }
-      return isInPeriod && t.type == _selectedTransactionType;
+      return isInPeriod && t.type == widget.selectedTransactionType;
     }).toList();
 
     int totalAmount = 0;
@@ -514,100 +589,62 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                SizedBox(
-                    height: 300,
-                    child: SfCircularChart(
-                      annotations: dataByCategory.isEmpty
-                          ? <CircularChartAnnotation>[
-                              CircularChartAnnotation(
-                                  widget: const Text('表示するデータがありません'))
-                            ]
-                          : null,
-                      series: <CircularSeries>[
-                        PieSeries<MapEntry<String, double>, String>(
-                          dataSource: sortedTagsForMonth
-                              .map((tag) =>
-                                  MapEntry(tag, dataByCategory[tag]!))
-                              .toList(),
-                          xValueMapper:
-                              (MapEntry<String, double> data, _) =>
-                                  data.key,
-                          yValueMapper:
-                              (MapEntry<String, double> data, _) =>
-                                  data.value,
-                          dataLabelMapper:
-                              (MapEntry<String, double> data, _) {
-                            final total = totalAmount;
-                            final percentage = total > 0
-                                ? (data.value / total * 100) : 0.0;
-                            String percentageText;
-                            if (percentage > 0 && percentage < 0.1) {
-                              percentageText = '<0.1%';
-                            } else {
-                              percentageText =
-                                  '${percentage.toStringAsFixed(1)}%';
-                            }
-                            return '${data.key}\n$percentageText';
-                          },
-                          dataLabelSettings: const DataLabelSettings(
-                            isVisible: true,
-                            labelPosition:
-                                ChartDataLabelPosition.outside,
-                            connectorLineSettings: ConnectorLineSettings(
-                              type: ConnectorType.curve,
-                              length: '10%',
-                            ),
+            // ▼ グラフ上にだけヒントを重ねる（最大1.5秒／点滅なし）
+            SizedBox(
+              height: 300,
+              child: Stack(
+                children: [
+                  SfCircularChart(
+                    annotations: dataByCategory.isEmpty
+                        ? <CircularChartAnnotation>[
+                            CircularChartAnnotation(
+                                widget: const Text('表示するデータがありません'))
+                          ]
+                        : null,
+                    series: <CircularSeries>[
+                      PieSeries<MapEntry<String, double>, String>(
+                        dataSource: sortedTagsForMonth
+                            .map((tag) => MapEntry(tag, dataByCategory[tag]!))
+                            .toList(),
+                        xValueMapper: (MapEntry<String, double> data, _) =>
+                            data.key,
+                        yValueMapper: (MapEntry<String, double> data, _) =>
+                            data.value,
+                        dataLabelMapper: (MapEntry<String, double> data, _) {
+                          final total = totalAmount;
+                          final percentage =
+                              total > 0 ? (data.value / total * 100) : 0.0;
+                          String percentageText;
+                          if (percentage > 0 && percentage < 0.1) {
+                            percentageText = '<0.1%';
+                          } else {
+                            percentageText =
+                                '${percentage.toStringAsFixed(1)}%';
+                          }
+                          return '${data.key}\n$percentageText';
+                        },
+                        dataLabelSettings: const DataLabelSettings(
+                          isVisible: true,
+                          labelPosition: ChartDataLabelPosition.outside,
+                          connectorLineSettings: ConnectorLineSettings(
+                            type: ConnectorType.curve,
+                            length: '10%',
                           ),
-                          pointColorMapper:
-                              (MapEntry<String, double> data, _) =>
-                                  _gentleColors[allTagsEver
-                                          .indexOf(data.key) %
-                                      _gentleColors.length],
-                        )
-                      ],
-                    ),
-                  ),
-                // 左矢印
-                Positioned(
-                  left: 0,
-                  child: IgnorePointer(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Opacity(
-                        opacity: 0.5,
-                        child: Icon(
-                          Icons.arrow_back_ios,
-                          size: 40,
-                          color: Colors.grey.shade700,
                         ),
-                      ),
-                    ),
+                        pointColorMapper: (MapEntry<String, double> data,
+                                int index) =>
+                            widget.gentleColors[allTagsEver.indexOf(data.key) %
+                                widget.gentleColors.length],
+                      )
+                    ],
                   ),
-                ),
-                // 右矢印
-                Positioned(
-                  right: 0,
-                  child: IgnorePointer(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: Opacity(
-                        opacity: 0.5,
-                        child: Icon(
-                          Icons.arrow_forward_ios,
-                          size: 40,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                  if (widget.showSwipeHint) const _GraphSwipeHintOverlay(),
+                ],
+              ),
             ),
             const SizedBox(height: 16.0),
             GestureDetector(
@@ -616,12 +653,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => TotalAmountDetailPage(
-                      transactions: transactionViewModel.transactions.where((t) => t.type == _selectedTransactionType).toList(),
-                      initialFocusedMonth: _focusedDate,
-                      selectedTransactionType:
-                          _selectedTransactionType,
+                      transactions: widget.transactionViewModel.transactions
+                          .where(
+                              (t) => t.type == widget.selectedTransactionType)
+                          .toList(),
+                      initialFocusedMonth: widget.focusedDate,
+                      selectedTransactionType: widget.selectedTransactionType,
                       allTags: allTagsEver,
-                      tagColors: _gentleColors,
+                      tagColors: widget.gentleColors,
                     ),
                   ),
                 );
@@ -632,15 +671,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16.0, vertical: 12.0),
                   child: Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '合計',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium,
-                      ),
+                      Text('合計',
+                          style: Theme.of(context).textTheme.titleMedium),
                       Row(
                         children: [
                           Text(
@@ -650,10 +684,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                 .titleLarge
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: _selectedTransactionType ==
-                                          'income'
-                                      ? Colors.green
-                                      : Colors.red,
+                                  color:
+                                      widget.selectedTransactionType == 'income'
+                                          ? Colors.green
+                                          : Colors.red,
                                 ),
                           ),
                           const SizedBox(width: 8),
@@ -668,7 +702,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ),
             const SizedBox(height: 8.0),
             if (dataByCategory.isNotEmpty)
-            ListView.builder(
+              ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: sortedTagsForMonth.length,
@@ -676,8 +710,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   final tag = sortedTagsForMonth[index];
                   final amount = dataByCategory[tag]!;
                   final total = totalAmount;
-                  final percentage =
-                      total > 0 ? (amount / total * 100) : 0.0;
+                  final percentage = total > 0 ? (amount / total * 100) : 0.0;
                   String percentageText;
                   if (percentage > 0 && percentage < 0.1) {
                     percentageText = '<0.1';
@@ -693,19 +726,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                             MaterialPageRoute(
                               builder: (context) => TagDetailPage(
                                 tagName: tag,
-                                transactions: transactionViewModel
-                                    .transactions
+                                transactions: widget
+                                    .transactionViewModel.transactions
                                     .where((t) =>
                                         t.tag == tag &&
                                         t.type ==
-                                            _selectedTransactionType)
+                                            widget.selectedTransactionType)
                                     .toList(),
-                                initialFocusedMonth: _focusedDate,
+                                initialFocusedMonth: widget.focusedDate,
                                 selectedTransactionType:
-                                    _selectedTransactionType,
-                                tagColor: _gentleColors[
+                                    widget.selectedTransactionType,
+                                tagColor: widget.gentleColors[
                                     allTagsEver.indexOf(tag) %
-                                        _gentleColors.length],
+                                        widget.gentleColors.length],
                               ),
                             ),
                           );
@@ -714,7 +747,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           width: 50,
                           height: 24,
                           decoration: BoxDecoration(
-                            color: _gentleColors[allTagsEver.indexOf(tag) % _gentleColors.length],
+                            color: widget.gentleColors[
+                                allTagsEver.indexOf(tag) %
+                                    widget.gentleColors.length],
                             borderRadius: BorderRadius.circular(4),
                           ),
                           alignment: Alignment.center,
@@ -731,8 +766,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                                '${Formatter.formatAmount(amount.toInt())}円'),
+                            Text('${Formatter.formatAmount(amount.toInt())}円'),
                             const SizedBox(width: 8),
                             const Icon(Icons.arrow_forward_ios,
                                 size: 16.0, color: Colors.grey),
@@ -741,11 +775,48 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       ),
                     ],
                   );
-                }, 
+                },
               ),
           ],
         ),
       ),
     );
+  }
+}
+
+// ▼ グラフ上にだけ出すスワイプヒント（点滅なし／タッチ非干渉）
+class _GraphSwipeHintOverlay extends StatelessWidget {
+  const _GraphSwipeHintOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 100.0),
+        child: Center(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.chevron_left, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('左右にスワイプ',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w600)),
+                  SizedBox(width: 8),
+                  Icon(Icons.chevron_right, color: Colors.white),
+                ],
+              ),
+            ),
+          ), // DecoratedBox の閉じ括弧
+        ), // Center の閉じ括弧
+      ), // Padding の閉じ括弧
+    ); // IgnorePointer の閉じ括弧
   }
 }
