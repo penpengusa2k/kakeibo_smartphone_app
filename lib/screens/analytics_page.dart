@@ -31,16 +31,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   bool _userInteracted = false;
 
   static const List<Color> _gentleColors = [
-    Color(0xFFE57373), // Red 300
     Color(0xFF64B5F6), // Blue 300
-    Color(0xFF81C784), // Green 300
     Color(0xFFFFB74D), // Orange 300
     Color(0xFF9575CD), // Deep Purple 300
     Color(0xFF4DB6AC), // Teal 300
     Color(0xFFFFF176), // Yellow 300
     Color(0xFFF06292), // Pink 300
-    Color(0xFFBA68C8), // Purple 300
-    Color(0xFF7986CB), // Indigo 300
+    Color(0xFF4DD0E1), // Cyan 300
+    Color(0xFFFF8A65), // Deep Orange 300
+    Color(0xFF90A4AE), // Blue Grey 300
+    Color(0xFFFFD54F), // Amber 300
   ];
 
   @override
@@ -342,8 +342,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 children: [
                   _buildSummaryItem('収入', summary['income']!, Colors.green),
                   _buildSummaryItem('支出', summary['expense']!, Colors.red),
-                  _buildSummaryItem('収支', summary['balance']!,
-                      summary['balance']! >= 0 ? Colors.blue : Colors.red),
+                  _buildSummaryItem('収支', summary['balance']!, Colors.blue),
                 ],
               ),
             ),
