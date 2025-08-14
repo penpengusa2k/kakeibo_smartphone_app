@@ -485,7 +485,7 @@ class _ChartPageContentState extends State<_ChartPageContent>
         .toList()
       ..sort();
 
-    final filteredTransactions =
+    final filteredTransactions = 
         widget.transactionViewModel.transactions.where((t) {
       bool isInPeriod;
       if (widget.viewType == _ViewType.month) {
@@ -507,7 +507,8 @@ class _ChartPageContentState extends State<_ChartPageContent>
       dataByCategory[t.tag] = (dataByCategory[t.tag] ?? 0) + t.amount;
     }
 
-    final sortedTagsForMonth = dataByCategory.keys.toList()..sort();
+    final sortedEntries = dataByCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     return SingleChildScrollView(
       child: Padding(
@@ -528,10 +529,7 @@ class _ChartPageContentState extends State<_ChartPageContent>
                         : null,
                     series: <CircularSeries>[
                       PieSeries<MapEntry<String, double>, String>(
-                        dataSource: sortedTagsForMonth
-                            .map((tag) =>
-                                MapEntry(tag, dataByCategory[tag]!))
-                            .toList(),
+                        dataSource: sortedEntries,
                         xValueMapper: (MapEntry<String, double> data, _) =>
                         data.key,
                         yValueMapper: (MapEntry<String, double> data, _) =>
@@ -627,10 +625,11 @@ class _ChartPageContentState extends State<_ChartPageContent>
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: sortedTagsForMonth.length,
+                itemCount: sortedEntries.length,
                 itemBuilder: (context, index) {
-                  final tag = sortedTagsForMonth[index];
-                  final amount = dataByCategory[tag]!;
+                  final entry = sortedEntries[index];
+                  final tag = entry.key;
+                  final amount = entry.value;
                   final total = totalAmount;
                   final percentage =
                       total > 0 ? (amount / total * 100) : 0.0;
