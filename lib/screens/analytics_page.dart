@@ -315,13 +315,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
                 foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.0),
                 ),
-                fixedSize: const Size(90, 36),
+                fixedSize: const Size(80, 32),
               ),
               icon: const Icon(Icons.sync, size: 18),
               label: Text(_viewType == _ViewType.month ? '月' : '年'),

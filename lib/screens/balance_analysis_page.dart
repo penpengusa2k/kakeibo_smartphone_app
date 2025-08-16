@@ -387,13 +387,13 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
         break;
     }
 
-    final periodToggle = OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
+    final periodToggle = TextButton.icon(
+      style: TextButton.styleFrom(
         foregroundColor: Colors.black87,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.0),
         ),
-        fixedSize: const Size(90, 36),
+        fixedSize: const Size(80, 32),
       ),
       icon: const Icon(Icons.sync, size: 18),
       label: Text(periodText),
@@ -468,7 +468,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('収支分析'),
+        title: const Text('収支推移'),
+        centerTitle: true,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
