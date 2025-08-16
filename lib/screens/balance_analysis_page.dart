@@ -356,10 +356,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                   itemBuilder: (context, i) {
                     final t = expensesList[i];
                     return _TxCard(
-                      date: t.date,
+                      transaction: t,
                       tag: _safeTag(t),
-                      amountText: '-${nf.format(t.amount)} 円',
-                      color: Colors.red,
                     );
                   },
                 ),
@@ -378,10 +376,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                   itemBuilder: (context, i) {
                     final t = incomesList[i];
                     return _TxCard(
-                      date: t.date,
+                      transaction: t,
                       tag: _safeTag(t),
-                      amountText: '+${nf.format(t.amount)} 円',
-                      color: Colors.green,
                     );
                   },
                 ),
@@ -814,32 +810,39 @@ class _EmptyNote extends StatelessWidget {
 
 class _TxCard extends StatelessWidget {
   const _TxCard({
-    required this.date,
+    required this.transaction,
     required this.tag,
-    required this.amountText,
-    required this.color,
   });
 
-  final DateTime date;
+  final Transaction transaction;
   final String tag;
-  final String amountText;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final d = DateFormat('yyyy/MM/dd').format(date);
+    final nf = NumberFormat('#,###');
+    final isIncome = transaction.type == 'income';
+    final color = isIncome ? Colors.green : Colors.red;
+    final amountText = '${isIncome ? '+' : '-'}${nf.format(transaction.amount)} 円';
+    final d = DateFormat('yyyy/MM/dd').format(transaction.date);
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.15),
-          child: Icon(Icons.receipt_long, color: color),
+        leading: Icon(
+          isIncome ? Icons.add_circle : Icons.remove_circle,
+          color: color,
+          size: 32,
         ),
-        title: Text(tag),
-        subtitle: Text(d),
-        trailing: Text(
+        title: Text(
           amountText,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(tag),
+            Text(d, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+          ],
         ),
       ),
     );

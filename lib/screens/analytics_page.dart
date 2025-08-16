@@ -332,17 +332,26 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       ),
       body: Column(
         children: [
-          // Summary Card
+          // ▼ Summary Card（オーバーフロー対策）
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                // ここを camelCase の正しい値で
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildSummaryItem('収入', summary['income']!, Colors.green),
-                  _buildSummaryItem('支出', summary['expense']!, Colors.red),
-                  _buildSummaryItem('収支', summary['balance']!, Colors.blue),
+                  Expanded(
+                    child: _buildSummaryItem('収入', summary['income']!, Colors.green),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildSummaryItem('支出', summary['expense']!, Colors.red),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildSummaryItem('収支', summary['balance']!, Colors.blue),
+                  ),
                 ],
               ),
             ),
@@ -414,15 +423,29 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
+  // ▼ サマリー：金額は万省略ナシ＆FittedBoxで自動縮小（はみ出し防止）
   Widget _buildSummaryItem(String title, int amount, Color color) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+            maxLines: 1,
+            softWrap: false,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(
-          '${Formatter.formatAmount(amount)}円',
-          style: TextStyle(
-              fontSize: 18, fontWeight: FontWeight.bold, color: color),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            '${Formatter.formatAmount(amount)}円',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+            maxLines: 1,
+            softWrap: false,
+          ),
         ),
       ],
     );
@@ -439,7 +462,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       currentDate: currentDate,
       selectedTransactionType: _selectedTransactionType,
       focusedDate: _focusedDate,
-      viewType: _viewType,
+      viewType: _ViewType.month == _viewType ? _ViewType.month : _ViewType.year,
       gentleColors: _gentleColors,
       showSwipeHint: showSwipeHint,
     );
@@ -485,7 +508,7 @@ class _ChartPageContentState extends State<_ChartPageContent>
         .toList()
       ..sort();
 
-    final filteredTransactions = 
+    final filteredTransactions =
         widget.transactionViewModel.transactions.where((t) {
       bool isInPeriod;
       if (widget.viewType == _ViewType.month) {
@@ -502,7 +525,7 @@ class _ChartPageContentState extends State<_ChartPageContent>
       totalAmount += t.amount;
     }
 
-    Map<String, double> dataByCategory = {};
+    final Map<String, double> dataByCategory = {};
     for (var t in filteredTransactions) {
       dataByCategory[t.tag] = (dataByCategory[t.tag] ?? 0) + t.amount;
     }
@@ -523,17 +546,17 @@ class _ChartPageContentState extends State<_ChartPageContent>
                   SfCircularChart(
                     annotations: dataByCategory.isEmpty
                         ? <CircularChartAnnotation>[
-                      CircularChartAnnotation(
-                          widget: const Text('表示するデータがありません'))
-                    ]
+                            CircularChartAnnotation(
+                                widget: const Text('表示するデータがありません'))
+                          ]
                         : null,
                     series: <CircularSeries>[
                       PieSeries<MapEntry<String, double>, String>(
                         dataSource: sortedEntries,
                         xValueMapper: (MapEntry<String, double> data, _) =>
-                        data.key,
+                            data.key,
                         yValueMapper: (MapEntry<String, double> data, _) =>
-                        data.value,
+                            data.value,
                         dataLabelMapper: (MapEntry<String, double> data, _) {
                           final total = totalAmount;
                           final percentage =
@@ -555,10 +578,11 @@ class _ChartPageContentState extends State<_ChartPageContent>
                             length: '10%',
                           ),
                         ),
-                        pointColorMapper: (MapEntry<String, double> data,
-                            int index) =>
-                        widget.gentleColors[allTagsEver.indexOf(data.key) %
-                            widget.gentleColors.length],
+                        pointColorMapper:
+                            (MapEntry<String, double> data, int index) =>
+                                widget.gentleColors[
+                                    allTagsEver.indexOf(data.key) %
+                                        widget.gentleColors.length],
                       )
                     ],
                   ),
@@ -597,18 +621,24 @@ class _ChartPageContentState extends State<_ChartPageContent>
                           style: Theme.of(context).textTheme.titleMedium),
                       Row(
                         children: [
-                          Text(
-                            '${Formatter.formatAmount(totalAmount)}円',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      widget.selectedTransactionType == 'income'
-                                          ? Colors.green
-                                          : Colors.red,
-                                ),
+                          // 合計金額は画面幅に合わせて縮小
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${Formatter.formatAmount(totalAmount)}円',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: widget.selectedTransactionType ==
+                                            'income'
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                              maxLines: 1,
+                              softWrap: false,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           const Icon(Icons.arrow_forward_ios,
@@ -621,7 +651,7 @@ class _ChartPageContentState extends State<_ChartPageContent>
               ),
             ),
             const SizedBox(height: 8.0),
-            if (dataByCategory.isNotEmpty)
+            if (sortedEntries.isNotEmpty)
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -633,12 +663,10 @@ class _ChartPageContentState extends State<_ChartPageContent>
                   final total = totalAmount;
                   final percentage =
                       total > 0 ? (amount / total * 100) : 0.0;
-                  String percentageText;
-                  if (percentage > 0 && percentage < 0.1) {
-                    percentageText = '<0.1';
-                  } else {
-                    percentageText = percentage.toStringAsFixed(1);
-                  }
+                  final String percentageText =
+                      (percentage > 0 && percentage < 0.1)
+                          ? '<0.1'
+                          : percentage.toStringAsFixed(1);
                   return Column(
                     children: [
                       ListTile(
@@ -688,7 +716,14 @@ class _ChartPageContentState extends State<_ChartPageContent>
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('${Formatter.formatAmount(amount.toInt())}円'),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '${Formatter.formatAmount(amount.toInt())}円',
+                                maxLines: 1,
+                                softWrap: false,
+                              ),
+                            ),
                             const SizedBox(width: 8),
                             const Icon(Icons.arrow_forward_ios,
                                 size: 16.0, color: Colors.grey),
@@ -779,7 +814,6 @@ class _MonthYearSwitcher extends StatelessWidget {
     final double yearScale = isMonth ? 0.80 : 1.0;
     final double yearOpacity = isMonth ? 0.55 : 1.0;
 
-    // Z順は子ウィジェットの順で制御（後の方が手前）
     final monthBadge = _AnimatedBadge(
       key: const ValueKey('month'),
       left: leftSlot,
