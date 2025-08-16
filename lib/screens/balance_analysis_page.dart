@@ -53,33 +53,128 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     });
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final pickedRange = await showDateRangePicker(
+  Future<void> _selectDay(BuildContext context, {required bool isStartDate}) async {
+    final initialDate = isStartDate ? _startDate : _endDate;
+
+    final pickedDate = await showDialog<DateTime>(
       context: context,
-      initialEntryMode: DatePickerEntryMode.calendarOnly,
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
+      builder: (BuildContext context) {
+        int selectedYear = initialDate.year;
+        int selectedMonth = initialDate.month;
+        int selectedDay = initialDate.day;
+        final now = DateTime.now();
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final daysInMonth = DateTime(selectedYear, selectedMonth + 1, 0).day;
+            if (selectedDay > daysInMonth) {
+              selectedDay = daysInMonth;
+            }
+
+            return AlertDialog(
+              title: Text(isStartDate ? '開始日を選択' : '終了日を選択', textAlign: TextAlign.center),
+              content: SizedBox(
+                width: 300,
+                height: 200,
+                child: Row(
+                  children: [
+                    // 年ピッカー
+                    Expanded(
+                      child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(initialItem: selectedYear - 2000),
+                        itemExtent: 40.0,
+                        onSelectedItemChanged: (int index) {
+                          setState(() {
+                            selectedYear = 2000 + index;
+                          });
+                        },
+                        children: List<Widget>.generate(
+                          now.year - 2000 + 2,
+                          (int index) => Center(child: Text('${2000 + index}年')),
+                        ),
+                      ),
+                    ),
+                    // 月ピッカー
+                    Expanded(
+                      child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(initialItem: selectedMonth - 1),
+                        itemExtent: 40.0,
+                        onSelectedItemChanged: (int index) {
+                          setState(() {
+                            selectedMonth = index + 1;
+                          });
+                        },
+                        children: List<Widget>.generate(
+                          12,
+                          (int index) => Center(child: Text('${index + 1}月')),
+                        ),
+                      ),
+                    ),
+                    // 日ピッカー
+                    Expanded(
+                      child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(initialItem: selectedDay - 1),
+                        itemExtent: 40.0,
+                        onSelectedItemChanged: (int index) {
+                          selectedDay = index + 1;
+                        },
+                        children: List<Widget>.generate(
+                          daysInMonth,
+                          (int index) => Center(child: Text('${index + 1}日')),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('キャンセル'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(DateTime(selectedYear, selectedMonth, selectedDay));
+                  },
+                  child: const Text('決定'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
-    if (!mounted) return;
-    if (pickedRange != null) {
+
+    if (pickedDate != null) {
+      if (isStartDate && pickedDate.isAfter(_endDate)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('開始日は終了日より前に設定してください。')));
+        return;
+      }
+      if (!isStartDate && pickedDate.isBefore(_startDate)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('終了日は開始日より後に設定してください。')));
+        return;
+      }
       setState(() {
-        _startDate = pickedRange.start;
-        _endDate = pickedRange.end;
+        if (isStartDate) {
+          _startDate = pickedDate;
+        } else {
+          _endDate = pickedDate;
+        }
       });
     }
   }
 
-  Future<void> _selectPeriod(BuildContext context) async {
+  Future<void> _selectPeriod(BuildContext context, {required bool isStartDate}) async {
     final now = DateTime.now();
-    int selectedYear = _startDate.year;
-    int selectedMonth = _startDate.month;
+    final initialDate = isStartDate ? _startDate : _endDate;
+    int selectedYear = initialDate.year;
+    int selectedMonth = initialDate.month;
 
     final result = await showDialog<DateTime>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('期間を選択', textAlign: TextAlign.center),
+          title: Text(isStartDate ? '開始期間を選択' : '終了期間を選択', textAlign: TextAlign.center),
           content: SizedBox(
             width: 300,
             height: 200,
@@ -125,10 +220,6 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
           ),
           actions: <Widget>[
             TextButton(
-              onPressed: () => Navigator.of(context).pop(DateTime.now()),
-              child: const Text('今月へ戻る'),
-            ),
-            TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('キャンセル'),
             ),
@@ -136,7 +227,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
               onPressed: () {
                 DateTime selectedDate;
                 if (_selectedPeriod == Period.year) {
-                  selectedDate = DateTime(selectedYear, 1, 1);
+                  selectedDate = DateTime(selectedYear);
                 } else {
                   selectedDate = DateTime(selectedYear, selectedMonth);
                 }
@@ -151,13 +242,30 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
 
     if (!mounted) return;
     if (result != null) {
+      DateTime newDate = result;
+
+      if (isStartDate && newDate.isAfter(_endDate)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('開始期間は終了期間より前に設定してください。')));
+        return;
+      }
+      if (!isStartDate && newDate.isBefore(_startDate)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('終了期間は開始期間より後に設定してください。')));
+        return;
+      }
+
       setState(() {
-        if (_selectedPeriod == Period.year) {
-          _startDate = DateTime(result.year, 1, 1);
-          _endDate = DateTime(result.year, 12, 31);
-        } else {
-          _startDate = DateTime(result.year, result.month, 1);
-          _endDate = DateTime(result.year, result.month + 1, 0);
+        if (isStartDate) {
+          if (_selectedPeriod == Period.year) {
+            _startDate = DateTime(newDate.year, 1, 1);
+          } else {
+            _startDate = DateTime(newDate.year, newDate.month, 1);
+          }
+        } else { // isEndDate
+          if (_selectedPeriod == Period.year) {
+            _endDate = DateTime(newDate.year, 12, 31);
+          } else {
+            _endDate = DateTime(newDate.year, newDate.month + 1, 0);
+          }
         }
       });
     }
@@ -219,74 +327,135 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     }).toList();
   }
 
+  Widget _buildDatePickerButton({
+    required String label,
+    required String valueText,
+    required VoidCallback onPressed,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            side: BorderSide(color: Colors.grey.shade400),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            height: 36,
+            child: Center(child: Text(valueText, style: const TextStyle(fontSize: 16, color: Colors.black87))),
+          ),
+        ),
+        Positioned(
+          top: -8,
+          left: 12,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final txs = context.select<TransactionViewModel, List<Transaction>>((vm) => vm.transactions);
     final data = _getChartData(txs);
     final nf = NumberFormat('#,###');
 
-    final periodToggle = Theme(
-      data: Theme.of(context).copyWith(
-        segmentedButtonTheme: SegmentedButtonThemeData(
-          style: ButtonStyle(
-            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-            ),
-          ),
+    String periodText;
+    switch (_selectedPeriod) {
+      case Period.day:
+        periodText = '日';
+        break;
+      case Period.month:
+        periodText = '月';
+        break;
+      case Period.year:
+        periodText = '年';
+        break;
+    }
+
+    final periodToggle = OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.black87,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8.0),
         ),
+        fixedSize: const Size(90, 36),
       ),
-      child: SizedBox(
-        width: double.infinity,
-        child: SegmentedButton<Period>(
-          segments: const [
-            ButtonSegment(value: Period.day, label: Text('日')),
-            ButtonSegment(value: Period.month, label: Text('月')),
-            ButtonSegment(value: Period.year, label: Text('年')),
-          ],
-          selected: <Period>{_selectedPeriod},
-          onSelectionChanged: (s) {
-            final next = s.first;
-            setState(() {
-              _selectedPeriod = next;
-              _updateDateRange();
-            });
-          },
-          showSelectedIcon: false,
-          multiSelectionEnabled: false,
-        ),
-      ),
+      icon: const Icon(Icons.sync, size: 18),
+      label: Text(periodText),
+      onPressed: () {
+        setState(() {
+          final currentIndex = Period.values.indexOf(_selectedPeriod);
+          final nextIndex = (currentIndex + 1) % Period.values.length;
+          _selectedPeriod = Period.values[nextIndex];
+          _updateDateRange();
+        });
+      },
     );
 
-    String rangeLabel;
-    if (_selectedPeriod == Period.day) {
-      rangeLabel =
-          '${DateFormat('yyyy/MM/dd').format(_startDate)} 〜 ${DateFormat('yyyy/MM/dd').format(_endDate)}';
-    } else if (_selectedPeriod == Period.month) {
-      rangeLabel =
-          '${DateFormat('yyyy/MM').format(_startDate)} 〜 ${DateFormat('yyyy/MM').format(_endDate)}';
-    } else {
-      rangeLabel =
-          '${DateFormat('yyyy').format(_startDate)} 〜 ${DateFormat('yyyy').format(_endDate)}';
+    String startDateText, endDateText;
+    switch (_selectedPeriod) {
+      case Period.day:
+        startDateText = DateFormat('yyyy/MM/dd').format(_startDate);
+        endDateText = DateFormat('yyyy/MM/dd').format(_endDate);
+        break;
+      case Period.month:
+        startDateText = DateFormat('yyyy/MM').format(_startDate);
+        endDateText = DateFormat('yyyy/MM').format(_endDate);
+        break;
+      case Period.year:
+        startDateText = DateFormat('yyyy').format(_startDate);
+        endDateText = DateFormat('yyyy').format(_endDate);
+        break;
     }
-    final rangePickerButton = Center(
-      child: FilledButton.icon(
-        style: FilledButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+
+    final datePickerWidget = Row(
+      children: [
+        Expanded(
+          child: _buildDatePickerButton(
+            label: '開始',
+            valueText: startDateText,
+            onPressed: () {
+              if (_selectedPeriod == Period.day) {
+                _selectDay(context, isStartDate: true);
+              } else {
+                _selectPeriod(context, isStartDate: true);
+              }
+            },
           ),
         ),
-        icon: const Icon(Icons.calendar_today_outlined),
-        label: Text(rangeLabel),
-        onPressed: () {
-          if (_selectedPeriod == Period.day) {
-            _selectDate(context);
-          } else {
-            _selectPeriod(context);
-          }
-        },
-      ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.0),
+          child: Text('～', style: TextStyle(fontSize: 16, color: Colors.black54)),
+        ),
+        Expanded(
+          child: _buildDatePickerButton(
+            label: '終了',
+            valueText: endDateText,
+            onPressed: () {
+              if (_selectedPeriod == Period.day) {
+                _selectDay(context, isStartDate: false);
+              } else {
+                _selectPeriod(context, isStartDate: false);
+              }
+            },
+          ),
+        ),
+      ],
     );
 
     final inRange = txs.where((t) => !t.date.isBefore(_startDate) && !t.date.isAfter(_endDate)).toList();
@@ -298,28 +467,25 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     final totalNet     = totalIncome - totalExpense;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('収支分析')),
+      appBar: AppBar(
+        title: const Text('収支分析'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: periodToggle,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(8),
           child: Column(
             children: [
-              periodToggle,
-              const SizedBox(height: 12),
-              rangePickerButton,
-              const SizedBox(height: 16),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  _LegendDot(color: Colors.green, label: '収入'),
-                  SizedBox(width: 12),
-                  _LegendDot(color: Colors.red, label: '支出'),
-                  SizedBox(width: 12),
-                  _LegendDot(color: Colors.blue, label: '差分(累計)'),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: datePickerWidget,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
 
               Card(
                 child: Padding(
@@ -335,6 +501,19 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                           ),
                   ),
                 ),
+              ),
+
+              const SizedBox(height: 8),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  _LegendDot(color: Colors.green, label: '収入'),
+                  SizedBox(width: 12),
+                  _LegendDot(color: Colors.red, label: '支出'),
+                  SizedBox(width: 12),
+                  _LegendDot(color: Colors.blue, label: '差分(累計)'),
+                ],
               ),
 
               const SizedBox(height: 16),
@@ -484,114 +663,112 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
     final interval = _niceGridInterval(maxAbsY);
     final step = period == Period.day ? 56.0 : (period == Period.month ? 72.0 : 100.0);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final plotWidth = max(constraints.maxWidth - _leftReserved, step * labels.length);
+    return LayoutBuilder(builder: (context, constraints) {
+      final plotWidth = max(constraints.maxWidth - _leftReserved, step * labels.length);
 
-        // 左：Y軸側チャート
-        final axisChart = LineChart(
-          LineChartData(
-            minX: 0, maxX: 1,
-            minY: -maxAbsY,
-            maxY: maxAbsY,
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: false,
-              horizontalInterval: interval,
-              getDrawingHorizontalLine: (v) => FlLine(strokeWidth: 1, color: Colors.black12),
+      // 左：Y軸側チャート
+      final axisChart = LineChart(
+        LineChartData(
+          minX: 0, maxX: 1,
+          minY: -maxAbsY,
+          maxY: maxAbsY,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: interval,
+            getDrawingHorizontalLine: (v) => FlLine(strokeWidth: 1, color: Colors.black12),
+          ),
+          extraLinesData: ExtraLinesData(
+            horizontalLines: [
+              HorizontalLine(y: 0, color: Colors.black26, strokeWidth: 1),
+            ],
+          ),
+          titlesData: FlTitlesData(
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false, reservedSize: _bottomReserved(labelAngle)),
             ),
-            extraLinesData: ExtraLinesData(
-              horizontalLines: [
-                HorizontalLine(y: 0, color: Colors.black26, strokeWidth: 1),
-              ],
-            ),
-            titlesData: FlTitlesData(
-              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(showTitles: false, reservedSize: _bottomReserved(labelAngle)),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: _leftReserved,
-                  interval: interval,
-                  getTitlesWidget: (v, meta) {
-                    if (v == 0) {
-                      return SideTitleWidget(
-                        axisSide: meta.axisSide,
-                        space: 2,
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Transform.translate(
-                            offset: const Offset(0, -8), // 0線と視覚的に揃うよう微調整
-                            child: const Text(
-                              '0',
-                              textAlign: TextAlign.right,
-                              textHeightBehavior: TextHeightBehavior(
-                                applyHeightToFirstAscent: false,
-                                applyHeightToLastDescent: false,
-                              ),
-                              style: TextStyle(
-                                fontSize: 12,
-                                height: 1.0,
-                              ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: _leftReserved,
+                interval: interval,
+                getTitlesWidget: (v, meta) {
+                  if (v == 0) {
+                    return SideTitleWidget(
+                      axisSide: meta.axisSide,
+                      space: 2,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Transform.translate(
+                          offset: const Offset(0, -8), // 0線と視覚的に揃うよう微調整
+                          child: const Text(
+                            '0',
+                            textAlign: TextAlign.right,
+                            textHeightBehavior: TextHeightBehavior(
+                              applyHeightToFirstAscent: false,
+                              applyHeightToLastDescent: false,
+                            ),
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.0,
                             ),
                           ),
                         ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
               ),
             ),
-            borderData: FlBorderData(
-              show: true,
-              border: const Border(
-                top: BorderSide(color: Colors.black12, width: 1),
-                right: BorderSide(color: Colors.transparent, width: 1),
-                left: BorderSide(color: Colors.black12, width: 1),
-                bottom: BorderSide(color: Colors.black12, width: 1),
-              ),
-            ),
-            lineBarsData: const [],
-            lineTouchData: const LineTouchData(enabled: false),
           ),
-        );
-
-        // 右：グラフ本体（スクロール）
-        final scrollChart = _UnifiedLineChart(
-          labels: labels,
-          incomes: incomes,
-          expenses: expenses,
-          balances: cumulative,
-          maxAbsY: maxAbsY,
-          labelAngleDeg: labelAngle,
-          labelStep: labelStep,
-          showLeftAxis: false,
-          leftReserved: _leftReserved,
-          bottomReserved: _bottomReserved(labelAngle),
-          drawLeftBorder: false,
-          horizontalInterval: interval,
-          minY: -maxAbsY,
-          maxY: maxAbsY,
-        );
-
-        return Row(
-          children: [
-            SizedBox(width: _leftReserved, child: axisChart),
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: SizedBox(width: plotWidth, child: scrollChart),
-              ),
+          borderData: FlBorderData(
+            show: true,
+            border: const Border(
+              top: BorderSide(color: Colors.black12, width: 1),
+              right: BorderSide(color: Colors.transparent, width: 1),
+              left: BorderSide(color: Colors.black12, width: 1),
+              bottom: BorderSide(color: Colors.black12, width: 1),
             ),
-          ],
-        );
-      },
-    );
+          ),
+          lineBarsData: const [],
+          lineTouchData: const LineTouchData(enabled: false),
+        ),
+      );
+
+      // 右：グラフ本体（スクロール）
+      final scrollChart = _UnifiedLineChart(
+        labels: labels,
+        incomes: incomes,
+        expenses: expenses,
+        balances: cumulative,
+        maxAbsY: maxAbsY,
+        labelAngleDeg: labelAngle,
+        labelStep: labelStep,
+        showLeftAxis: false,
+        leftReserved: _leftReserved,
+        bottomReserved: _bottomReserved(labelAngle),
+        drawLeftBorder: false,
+        horizontalInterval: interval,
+        minY: -maxAbsY,
+        maxY: maxAbsY,
+      );
+
+      return Row(
+        children: [
+          SizedBox(width: _leftReserved, child: axisChart),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: SizedBox(width: plotWidth, child: scrollChart),
+            ),
+          ),
+        ],
+      );
+    });
   }
 }
 

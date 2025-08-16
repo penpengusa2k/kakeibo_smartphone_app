@@ -315,9 +315,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: _MonthYearSwitcher(
-              viewType: _viewType,
-              onToggle: () {
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.black87,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                fixedSize: const Size(90, 36),
+              ),
+              icon: const Icon(Icons.sync, size: 18),
+              label: Text(_viewType == _ViewType.month ? '月' : '年'),
+              onPressed: () {
                 setState(() {
                   _viewType = _viewType == _ViewType.month
                       ? _ViewType.year
@@ -778,150 +786,4 @@ class _GraphSwipeHintOverlay extends StatelessWidget {
   }
 }
 
-/// 月/年スイッチャー（左右固定・中身固定・アニメ付き）
-/// 左=「月」、右=「年」で固定。切り替え時は前後(Z順)・スケール・不透明度・上下位置をアニメ。
-/// 選択側はオレンジ（影なし）、アイコン間隔は狭め。
-class _MonthYearSwitcher extends StatelessWidget {
-  final _ViewType viewType;
-  final VoidCallback onToggle;
-  const _MonthYearSwitcher({
-    required this.viewType,
-    required this.onToggle,
-  });
 
-  @override
-  Widget build(BuildContext context) {
-    final active = Colors.orange.shade700;
-    final inactive =
-        Theme.of(context).textTheme.titleLarge?.color ?? Colors.black87;
-
-    // レイアウト（狭め）
-    const double containerWidth = 84;
-    const double containerHeight = 40;
-    const double leftSlot = 20.0;  // 月（固定）
-    const double rightSlot = 40.0; // 年（固定）
-    const double badgeSize = 38.0;
-
-    final bool isMonth = viewType == _ViewType.month;
-
-    // 月バッジ（左固定）
-    final double monthTop = isMonth ? 0.0 : -6.0;
-    final double monthScale = isMonth ? 1.0 : 0.80;
-    final double monthOpacity = isMonth ? 1.0 : 0.55;
-
-    // 年バッジ（右固定）
-    final double yearTop = isMonth ? -6.0 : 0.0;
-    final double yearScale = isMonth ? 0.80 : 1.0;
-    final double yearOpacity = isMonth ? 0.55 : 1.0;
-
-    final monthBadge = _AnimatedBadge(
-      key: const ValueKey('month'),
-      left: leftSlot,
-      top: monthTop,
-      label: '月',
-      isActive: isMonth,
-      activeColor: active,
-      inactiveColor: inactive,
-      scale: monthScale,
-      opacity: monthOpacity,
-      size: badgeSize,
-    );
-
-    final yearBadge = _AnimatedBadge(
-      key: const ValueKey('year'),
-      left: rightSlot,
-      top: yearTop,
-      label: '年',
-      isActive: !isMonth,
-      activeColor: active,
-      inactiveColor: inactive,
-      scale: yearScale,
-      opacity: yearOpacity,
-      size: badgeSize,
-    );
-
-    final children = isMonth
-        ? <Widget>[yearBadge, monthBadge] // 月が手前
-        : <Widget>[monthBadge, yearBadge]; // 年が手前
-
-    return InkWell(
-      onTap: onToggle,
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        width: containerWidth,
-        height: containerHeight,
-        child: Stack(clipBehavior: Clip.none, children: children),
-      ),
-    );
-  }
-}
-
-/// 位置(top/left)・スケール・不透明度を**暗黙アニメ**で滑らかに。
-class _AnimatedBadge extends StatelessWidget {
-  final double left;
-  final double top;
-  final String label;
-  final bool isActive;
-  final Color activeColor;
-  final Color inactiveColor;
-  final double scale;
-  final double opacity;
-  final double size;
-
-  const _AnimatedBadge({
-    super.key,
-    required this.left,
-    required this.top,
-    required this.label,
-    required this.isActive,
-    required this.activeColor,
-    required this.inactiveColor,
-    required this.scale,
-    required this.opacity,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive ? activeColor : inactiveColor;
-
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeInOut,
-      left: left,
-      top: top,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeInOut,
-        opacity: opacity,
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeInOut,
-          scale: scale,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(Icons.calendar_today_outlined,
-                    size: size - 8, color: color),
-                Positioned(
-                  bottom: 6,
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: color,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
