@@ -50,15 +50,19 @@ class _CalendarPageState extends State<CalendarPage> {
   void _updateSelectedDayTransactions() {
     final transactionViewModel = Provider.of<TransactionViewModel>(context, listen: false);
     if (_selectedDay == null) {
-      _selectedDayTransactions = [];
+      setState(() {
+        _selectedDayTransactions = [];
+      });
       return;
     }
-    _selectedDayTransactions = transactionViewModel.transactions
-        .where((t) =>
-            t.date.year == _selectedDay!.year &&
-            t.date.month == _selectedDay!.month &&
-            t.date.day == _selectedDay!.day)
-        .toList();
+    setState(() {
+      _selectedDayTransactions = transactionViewModel.transactions
+          .where((t) =>
+              t.date.year == _selectedDay!.year &&
+              t.date.month == _selectedDay!.month &&
+              t.date.day == _selectedDay!.day)
+          .toList();
+    });
   }
 
   Future<void> _selectMonth(BuildContext context) async {
@@ -150,6 +154,9 @@ class _CalendarPageState extends State<CalendarPage> {
   Widget build(BuildContext context) {
     final transactionViewModel = Provider.of<TransactionViewModel>(context);
     final settingsViewModel = Provider.of<SettingsViewModel>(context);
+
+    final expensesList = _selectedDayTransactions.where((t) => t.type == 'expense').toList();
+    final incomesList = _selectedDayTransactions.where((t) => t.type == 'income').toList();
 
     int totalIncome = 0;
     int totalExpense = 0;
@@ -398,93 +405,29 @@ class _CalendarPageState extends State<CalendarPage> {
                 flex: 4,
                 child: _selectedDayTransactions.isEmpty
                     ? const Center(child: Text('選択した日付の取引はありません。'))
-                    : ListView.builder(
-                        itemCount: _selectedDayTransactions.length,
-                        itemBuilder: (context, index) {
-                          final transaction = _selectedDayTransactions[index];
-                          return Dismissible(
-                            key: Key(transaction.id.toString()),
-                            direction: DismissDirection.endToStart,
-                            background: Container(
-                              color: Colors.red,
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                              child: const Icon(Icons.delete, color: Colors.white),
-                            ),
-                            confirmDismiss: (direction) async {
-                              return await showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: const Text("確認"),
-                                    content: Text("'${transaction.tag}'の取引を削除してもよろしいですか？"),
-                                    actions: <Widget>[
-                                      TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("キャンセル")),
-                                      TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text("削除")),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                            onDismissed: (direction) async {
-                              await transactionViewModel.deleteTransaction(transaction.id!);
-                              _updateSelectedDayTransactions();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('${transaction.tag}の取引を削除しました')),
-                              );
-                            },
-                            child: Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                              child: ListTile(
-                                leading: Icon(
-                                  transaction.type == 'income' ? Icons.add_circle : Icons.remove_circle,
-                                  color: transaction.type == 'income' ? Colors.green : Colors.red,
-                                ),
-                                title: Text(
-                                  '${Formatter.formatAmount(transaction.amount)}円',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: transaction.type == 'income' ? Colors.green : Colors.red,
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('タグ: ${transaction.tag}'),
-                                    if (transaction.memo != null && transaction.memo!.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 2.0),
-                                        child: Text(
-                                          'メモ: ${transaction.memo!}',
-                                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                onTap: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
-                                    useSafeArea: true,
-                                    enableDrag: false,
-                                    builder: (context) => Material(
-                                      color: Theme.of(context).scaffoldBackgroundColor,
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                                      child: QuickInputModal(
-                                        initialTransaction: transaction,
-                                        onSave: (updatedTransaction) async {
-                                          await transactionViewModel.updateTransaction(updatedTransaction);
-                                          _updateSelectedDayTransactions();
-                                        },
-                                      ),
-                                    ),
-                                  );
-                                },
+                    : SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            children: [
+                              _buildTransactionSection(
+                                title: '支出',
+                                transactions: expensesList,
+                                transactionViewModel: transactionViewModel,
+                                emptyMessage: 'この日の支出はありません',
+                                color: Colors.red,
                               ),
-                            ),
-                          );
-                        },
+                              const SizedBox(height: 16),
+                              _buildTransactionSection(
+                                title: '収入',
+                                transactions: incomesList,
+                                transactionViewModel: transactionViewModel,
+                                emptyMessage: 'この日の収入はありません',
+                                color: Colors.green,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
               ),
             ],
@@ -528,6 +471,134 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTransactionSection({
+    required String title,
+    required List<Transaction> transactions,
+    required TransactionViewModel transactionViewModel,
+    required String emptyMessage,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(width: 6, height: 18, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const Divider(thickness: 1),
+        if (transactions.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Center(child: Text(emptyMessage, style: TextStyle(color: Colors.grey[600]))),
+          )
+        else
+          ...transactions.map((t) => _buildTransactionItem(t, transactionViewModel)),
+      ],
+    );
+  }
+
+  Widget _buildTransactionItem(Transaction transaction, TransactionViewModel transactionViewModel) {
+    return Dismissible(
+      key: Key(transaction.id.toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text("確認"),
+              content: Text("'${transaction.tag}'の取引を削除してもよろしいですか？"),
+              actions: <Widget>[
+                TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("キャンセル")),
+                TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text("削除")),
+              ],
+            );
+          },
+        );
+      },
+      onDismissed: (direction) async {
+        await transactionViewModel.deleteTransaction(transaction.id!);
+        _updateSelectedDayTransactions();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${transaction.tag}の取引を削除しました')),
+        );
+      },
+      child: GestureDetector(
+        onTap: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            useSafeArea: true,
+            enableDrag: false,
+            builder: (context) => Material(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: QuickInputModal(
+                initialTransaction: transaction,
+                onSave: (updatedTransaction) async {
+                  await transactionViewModel.updateTransaction(updatedTransaction);
+                  _updateSelectedDayTransactions();
+                },
+              ),
+            ),
+          );
+        },
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  transaction.type == 'income' ? Icons.add_circle : Icons.remove_circle,
+                  color: transaction.type == 'income' ? Colors.green : Colors.red,
+                  size: 32,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(transaction.tag, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      if (transaction.memo != null && transaction.memo!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          transaction.memo!,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ]
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '${transaction.type == 'income' ? '+' : '-'}${Formatter.formatAmount(transaction.amount)}円',
+                  style: TextStyle(
+                    color: transaction.type == 'income' ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

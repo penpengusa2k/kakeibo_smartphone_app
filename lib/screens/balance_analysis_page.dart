@@ -827,21 +827,35 @@ class _TxCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListTile(
-        leading: Icon(
-          isIncome ? Icons.add_circle : Icons.remove_circle,
-          color: color,
-          size: 32,
-        ),
-        title: Text(
-          amountText,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
           children: [
-            Text(tag),
-            Text(d, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+            Icon(
+              isIncome ? Icons.add_circle : Icons.remove_circle,
+              color: color,
+              size: 32,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(tag, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 2),
+                  Text(d, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              amountText,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
           ],
         ),
       ),
