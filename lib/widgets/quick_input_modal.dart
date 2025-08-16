@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:kakeibo_smartphone_app/models/transaction.dart';
@@ -228,7 +229,7 @@ class _QuickInputModalState extends State<QuickInputModal> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    // const SizedBox(height: 2),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -254,77 +255,58 @@ class _QuickInputModalState extends State<QuickInputModal> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        const double borderWidth = 1.0;
-                        // Total borders = 3 (left, middle, right)
-                        final double buttonWidth = (constraints.maxWidth - (borderWidth * 3)) / 2;
-                        return ToggleButtons(
-                          isSelected: [
-                            _transactionType == 'expense',
-                            _transactionType == 'income'
-                          ],
-                          onPressed: (index) {
+                    // const SizedBox(height: 4),
+                    Center(
+                      child: CupertinoSlidingSegmentedControl<String>(
+                        groupValue: _transactionType,
+                        onValueChanged: (String? value) {
+                          if (value != null) {
                             setState(() {
-                              _transactionType = index == 0 ? 'expense' : 'income';
+                              _transactionType = value;
                               _selectedTag = '未設定';
                             });
-                          },
-                          fillColor: _transactionType == 'expense'
-                              ? Colors.red.shade100
-                              : Colors.green.shade100,
-                          selectedColor: _transactionType == 'expense'
-                              ? Colors.red.shade800
-                              : Colors.green.shade800,
-                          color: Colors.black87,
-                          borderColor: Colors.grey.shade400,
-                          selectedBorderColor: _transactionType == 'expense'
-                              ? Colors.red.shade700
-                              : Colors.green.shade700,
-                          borderRadius: BorderRadius.circular(8.0),
-                          borderWidth: borderWidth,
-                          renderBorder: true,
-                          children: [
-                            SizedBox(
-                              width: buttonWidth,
-                              child: const Center(child: Text('支出')),
-                            ),
-                            SizedBox(
-                              width: buttonWidth,
-                              child: const Center(child: Text('収入')),
-                            ),
-                          ],
-                        );
-                      },
+                          }
+                        },
+                        children: const <String, Widget>{
+                          'expense': Padding(
+                            padding:
+                                EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            child: Text('支出'),
+                          ),
+                          'income': Padding(
+                            padding:
+                                EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            child: Text('収入'),
+                          ),
+                        },
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     Container(
                       alignment: Alignment.centerRight,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
+                          horizontal: 20, vertical: 5),
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        Formatter.formatAmount(
-                                int.tryParse(_amountString) ?? 0) +
-                            '円',
+                        '${Formatter.formatAmount(
+                                int.tryParse(_amountString) ?? 0)}円',
                         style: const TextStyle(
                             fontSize: 32, fontWeight: FontWeight.bold),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    // const SizedBox(height: 2),
                     Stack(
                       clipBehavior: Clip.none,
                       children: [
                         Container(
                           width: double.infinity,
                           margin: const EdgeInsets.only(top: 8),
-                          padding: const EdgeInsets.fromLTRB(12, 20, 12, 8),
+                          padding: const EdgeInsets.fromLTRB(8, 16, 8, 4),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey),
                             borderRadius: BorderRadius.circular(4),
@@ -352,7 +334,7 @@ class _QuickInputModalState extends State<QuickInputModal> {
                                       horizontal: 12, vertical: 8),
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              // const SizedBox(height: 8),
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 4,
@@ -389,7 +371,7 @@ class _QuickInputModalState extends State<QuickInputModal> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: _memoController,
                       decoration: const InputDecoration(
@@ -406,9 +388,9 @@ class _QuickInputModalState extends State<QuickInputModal> {
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
-                        childAspectRatio: 2.2,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
+                        childAspectRatio: 2.4,
+                        crossAxisSpacing: 4,
+                        mainAxisSpacing: 4,
                       ),
                       itemCount: 12,
                       itemBuilder: (context, index) {
@@ -434,7 +416,10 @@ class _QuickInputModalState extends State<QuickInputModal> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               padding: EdgeInsets.zero,
-                              textStyle: const TextStyle(fontSize: 24),
+                              textStyle: const TextStyle(fontSize: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
                             ),
                             child: const Icon(Icons.check, color: Colors.white),
                           );
@@ -444,7 +429,10 @@ class _QuickInputModalState extends State<QuickInputModal> {
                             onLongPress: _onClearPressed,
                             style: ElevatedButton.styleFrom(
                               padding: EdgeInsets.zero,
-                              textStyle: const TextStyle(fontSize: 24),
+                              textStyle: const TextStyle(fontSize: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
                             ),
                             child: const Icon(Icons.backspace_outlined),
                           );
@@ -455,7 +443,10 @@ class _QuickInputModalState extends State<QuickInputModal> {
                             },
                             style: ElevatedButton.styleFrom(
                               padding: EdgeInsets.zero,
-                              textStyle: const TextStyle(fontSize: 24),
+                              textStyle: const TextStyle(fontSize: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
                             ),
                             child: Text(key),
                           );
