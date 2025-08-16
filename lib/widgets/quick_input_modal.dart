@@ -190,10 +190,16 @@ class _QuickInputModalState extends State<QuickInputModal> {
     ];
     final isTagInDropdown = dropdownTags.any((tag) => tag.name == _selectedTag);
 
+    // Calculate initial sheet size to fit content up to the calculator.
+    // This prevents the sheet from opening too high on tall screens.
+    const double contentHeight = 680; // Estimated content height in pixels.
+    final screenHeight = MediaQuery.of(context).size.height;
+    final double initialSize = (contentHeight / screenHeight).clamp(0.5, 0.9);
+
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey,
       child: DraggableScrollableSheet(
-        initialChildSize: 0.9,
+        initialChildSize: initialSize,
         minChildSize: 0.5,
         maxChildSize: 1.0, // 画面全体に拡張できるように変更
         expand: false,
@@ -320,7 +326,7 @@ class _QuickInputModalState extends State<QuickInputModal> {
                                 items: dropdownTags.map((Tag tag) {
                                   return DropdownMenuItem<String>(
                                     value: tag.name,
-                                    child: Text(tag.name),
+                                    child: Text(tag.name, style: const TextStyle(fontSize: 14)),
                                   );
                                 }).toList(),
                                 onChanged: (String? newValue) {
@@ -331,7 +337,7 @@ class _QuickInputModalState extends State<QuickInputModal> {
                                 decoration: const InputDecoration(
                                   border: OutlineInputBorder(),
                                   contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
+                                      horizontal: 12, vertical: 4),
                                 ),
                               ),
                               // const SizedBox(height: 8),
@@ -340,7 +346,7 @@ class _QuickInputModalState extends State<QuickInputModal> {
                                 runSpacing: 4,
                                 children: defaultTags.map((tag) {
                                   return ChoiceChip(
-                                    label: Text(tag.name),
+                                    label: Text(tag.name, style: const TextStyle(fontSize: 12)),
                                     selected: _selectedTag == tag.name,
                                     onSelected: (selected) {
                                       setState(() {
