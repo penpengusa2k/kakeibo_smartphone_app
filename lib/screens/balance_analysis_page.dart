@@ -225,24 +225,37 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     final data = _getChartData(txs);
     final nf = NumberFormat('#,###');
 
-    final periodToggle = SizedBox(
-      width: double.infinity,
-      child: SegmentedButton<Period>(
-        segments: const [
-          ButtonSegment(value: Period.day, label: Text('日')),
-          ButtonSegment(value: Period.month, label: Text('月')),
-          ButtonSegment(value: Period.year, label: Text('年')),
-        ],
-        selected: <Period>{_selectedPeriod},
-        onSelectionChanged: (s) {
-          final next = s.first;
-          setState(() {
-            _selectedPeriod = next;
-            _updateDateRange();
-          });
-        },
-        showSelectedIcon: false,
-        multiSelectionEnabled: false,
+    final periodToggle = Theme(
+      data: Theme.of(context).copyWith(
+        segmentedButtonTheme: SegmentedButtonThemeData(
+          style: ButtonStyle(
+            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+            ),
+          ),
+        ),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        child: SegmentedButton<Period>(
+          segments: const [
+            ButtonSegment(value: Period.day, label: Text('日')),
+            ButtonSegment(value: Period.month, label: Text('月')),
+            ButtonSegment(value: Period.year, label: Text('年')),
+          ],
+          selected: <Period>{_selectedPeriod},
+          onSelectionChanged: (s) {
+            final next = s.first;
+            setState(() {
+              _selectedPeriod = next;
+              _updateDateRange();
+            });
+          },
+          showSelectedIcon: false,
+          multiSelectionEnabled: false,
+        ),
       ),
     );
 
@@ -259,6 +272,11 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     }
     final rangePickerButton = Center(
       child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
         icon: const Icon(Icons.calendar_today_outlined),
         label: Text(rangeLabel),
         onPressed: () {
