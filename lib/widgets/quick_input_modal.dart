@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';            // ← 追加: TextInputFormatter
+import 'package:characters/characters.dart';       // ← 追加: 安全な文字数カウント
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:kakeibo_smartphone_app/models/transaction.dart';
@@ -25,6 +27,33 @@ class QuickInputModal extends StatefulWidget {
 
   @override
   State<QuickInputModal> createState() => _QuickInputModalState();
+}
+
+/// メモ入力を 50 文字で打ち止めし、超過トライ時にスナックバーを出すフォーマッタ
+class _MemoLimitFormatter extends TextInputFormatter {
+  _MemoLimitFormatter({required this.max, required this.onLimit});
+
+  final int max;
+  final VoidCallback onLimit;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Characters を使ってサロゲートペア・結合文字にも安全に対応
+    final len = newValue.text.characters.length;
+    if (len <= max) return newValue;
+
+    onLimit();
+
+    final truncated = newValue.text.characters.take(max).toString();
+    return TextEditingValue(
+      text: truncated,
+      selection: TextSelection.collapsed(offset: truncated.length),
+      composing: TextRange.empty,
+    );
+  }
 }
 
 class _QuickInputModalState extends State<QuickInputModal> {
@@ -522,7 +551,7 @@ class _QuickInputModalState extends State<QuickInputModal> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          // メモ
+                          // メモ（50文字制限 + 超過時はスナックバー）
                           TextField(
                             controller: _memoController,
                             decoration: const InputDecoration(
@@ -532,6 +561,12 @@ class _QuickInputModalState extends State<QuickInputModal> {
                                   FloatingLabelBehavior.always,
                             ),
                             maxLines: 1,
+                            inputFormatters: [
+                              _MemoLimitFormatter(
+                                max: 50,
+                                onLimit: () => _showSnackBar('メモは50文字までです。'),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 8),
                         ],

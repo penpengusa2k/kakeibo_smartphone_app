@@ -9,8 +9,24 @@ import 'package:fl_chart/fl_chart.dart';
 
 import 'package:kakeibo_smartphone_app/viewmodels/transaction_viewmodel.dart';
 import 'package:kakeibo_smartphone_app/models/transaction.dart';
+import 'package:kakeibo_smartphone_app/utils/formatter.dart';
 
 enum Period { day, month, year }
+
+// ===== Calendar-like constants (compacted) =====
+const Color kBandBgColor = Color(0xFFF2F3F5);
+
+const double kTableHeaderMinH = 26;
+const double kTableHeaderMaxH = 28;
+const double kDateHeaderMinH = 24;
+const double kDateHeaderMaxH = 26;
+
+const double kTxRowHeight = 40;
+
+const double kSummaryTileHeight = 48;
+const double kSummaryAmountLineHeight = 18;
+const double kSummaryLabelFontSize = 11;
+const double kSummaryAmountFontSize = 13;
 
 class BalanceAnalysisPage extends StatefulWidget {
   const BalanceAnalysisPage({super.key});
@@ -39,8 +55,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     setState(() {
       switch (_selectedPeriod) {
         case Period.day:
-          _startDate = DateTime(now.year, now.month, now.day)
-              .subtract(const Duration(days: 7));
+          _startDate =
+              DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
           _endDate = DateTime(now.year, now.month, now.day);
           break;
         case Period.month:
@@ -55,8 +71,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     });
   }
 
-  Future<void> _selectDay(BuildContext context,
-      {required bool isStartDate}) async {
+  Future<void> _selectDay(BuildContext context, {required bool isStartDate}) async {
     final initialDate = isStartDate ? _startDate : _endDate;
 
     final pickedDate = await showDialog<DateTime>(
@@ -69,64 +84,48 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
 
         return StatefulBuilder(
           builder: (context, setState) {
-            final daysInMonth =
-                DateTime(selectedYear, selectedMonth + 1, 0).day;
-            if (selectedDay > daysInMonth) {
-              selectedDay = daysInMonth;
-            }
+            final daysInMonth = DateTime(selectedYear, selectedMonth + 1, 0).day;
+            if (selectedDay > daysInMonth) selectedDay = daysInMonth;
 
             return AlertDialog(
-              title: Text(isStartDate ? '開始日を選択' : '終了日を選択',
-                  textAlign: TextAlign.center),
+              title: Text(isStartDate ? '開始日を選択' : '終了日を選択', textAlign: TextAlign.center),
               content: SizedBox(
                 width: 300,
                 height: 200,
                 child: Row(
                   children: [
-                    // 年ピッカー
                     Expanded(
                       child: CupertinoPicker(
-                        scrollController: FixedExtentScrollController(
-                            initialItem: selectedYear - 2000),
+                        scrollController:
+                            FixedExtentScrollController(initialItem: selectedYear - 2000),
                         itemExtent: 40.0,
                         onSelectedItemChanged: (int index) {
-                          setState(() {
-                            selectedYear = 2000 + index;
-                          });
+                          setState(() => selectedYear = 2000 + index);
                         },
                         children: List<Widget>.generate(
                           now.year - 2000 + 2,
-                          (int index) =>
-                              Center(child: Text('${2000 + index}年')),
+                          (int index) => Center(child: Text('${2000 + index}年')),
                         ),
                       ),
                     ),
-                    // 月ピッカー
                     Expanded(
                       child: CupertinoPicker(
-                        scrollController: FixedExtentScrollController(
-                            initialItem: selectedMonth - 1),
+                        scrollController:
+                            FixedExtentScrollController(initialItem: selectedMonth - 1),
                         itemExtent: 40.0,
                         onSelectedItemChanged: (int index) {
-                          setState(() {
-                            selectedMonth = index + 1;
-                          });
+                          setState(() => selectedMonth = index + 1);
                         },
-                        children: List<Widget>.generate(
-                          12,
-                          (int index) => Center(child: Text('${index + 1}月')),
-                        ),
+                        children:
+                            List<Widget>.generate(12, (int i) => Center(child: Text('${i + 1}月'))),
                       ),
                     ),
-                    // 日ピッカー
                     Expanded(
                       child: CupertinoPicker(
-                        scrollController: FixedExtentScrollController(
-                            initialItem: selectedDay - 1),
+                        scrollController:
+                            FixedExtentScrollController(initialItem: selectedDay - 1),
                         itemExtent: 40.0,
-                        onSelectedItemChanged: (int index) {
-                          selectedDay = index + 1;
-                        },
+                        onSelectedItemChanged: (int index) => selectedDay = index + 1,
                         children: List<Widget>.generate(
                           daysInMonth,
                           (int index) => Center(child: Text('${index + 1}日')),
@@ -137,15 +136,10 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                 ),
               ),
               actions: <Widget>[
+                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('キャンセル')),
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('キャンセル'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(
-                        DateTime(selectedYear, selectedMonth, selectedDay));
-                  },
+                  onPressed: () =>
+                      Navigator.of(context).pop(DateTime(selectedYear, selectedMonth, selectedDay)),
                   child: const Text('決定'),
                 ),
               ],
@@ -157,13 +151,13 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
 
     if (pickedDate != null) {
       if (isStartDate && pickedDate.isAfter(_endDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('開始日は終了日より前に設定してください。')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('開始日は終了日より前に設定してください。')));
         return;
       }
       if (!isStartDate && pickedDate.isBefore(_startDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('終了日は開始日より後に設定してください。')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('終了日は開始日より後に設定してください。')));
         return;
       }
       setState(() {
@@ -176,8 +170,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     }
   }
 
-  Future<void> _selectPeriod(BuildContext context,
-      {required bool isStartDate}) async {
+  Future<void> _selectPeriod(BuildContext context, {required bool isStartDate}) async {
     final now = DateTime.now();
     final initialDate = isStartDate ? _startDate : _endDate;
     int selectedYear = initialDate.year;
@@ -187,8 +180,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(isStartDate ? '開始期間を選択' : '終了期間を選択',
-              textAlign: TextAlign.center),
+          title: Text(isStartDate ? '開始期間を選択' : '終了期間を選択', textAlign: TextAlign.center),
           content: SizedBox(
             width: 300,
             height: 200,
@@ -196,17 +188,14 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
               children: [
                 Expanded(
                   child: CupertinoPicker(
-                    scrollController: FixedExtentScrollController(
-                        initialItem: selectedYear - 2000),
+                    scrollController:
+                        FixedExtentScrollController(initialItem: selectedYear - 2000),
                     itemExtent: 40.0,
-                    onSelectedItemChanged: (int index) {
-                      selectedYear = 2000 + index;
-                    },
+                    onSelectedItemChanged: (int index) => selectedYear = 2000 + index,
                     children: List<Widget>.generate(
                       now.year - 2000 + 2,
                       (int index) => Center(
-                        child: Text('${2000 + index}年',
-                            style: const TextStyle(fontSize: 20)),
+                        child: Text('${2000 + index}年', style: const TextStyle(fontSize: 20)),
                       ),
                     ),
                   ),
@@ -214,18 +203,14 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                 if (_selectedPeriod != Period.year)
                   Expanded(
                     child: CupertinoPicker(
-                      scrollController: FixedExtentScrollController(
-                          initialItem: selectedMonth - 1),
+                      scrollController:
+                          FixedExtentScrollController(initialItem: selectedMonth - 1),
                       itemExtent: 40.0,
-                      onSelectedItemChanged: (int index) {
-                        selectedMonth = index + 1;
-                      },
+                      onSelectedItemChanged: (int index) => selectedMonth = index + 1,
                       children: List<Widget>.generate(
                         12,
-                        (int index) => Center(
-                          child: Text('${index + 1}月',
-                              style: const TextStyle(fontSize: 20)),
-                        ),
+                        (int index) =>
+                            Center(child: Text('${index + 1}月', style: const TextStyle(fontSize: 20))),
                       ),
                     ),
                   ),
@@ -233,10 +218,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
             ),
           ),
           actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('キャンセル'),
-            ),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('キャンセル')),
             TextButton(
               onPressed: () {
                 DateTime selectedDate;
@@ -259,29 +241,25 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
       DateTime newDate = result;
 
       if (isStartDate && newDate.isAfter(_endDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('開始期間は終了期間より前に設定してください。')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('開始期間は終了期間より前に設定してください。')));
         return;
       }
       if (!isStartDate && newDate.isBefore(_startDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('終了期間は開始期間より後に設定してください。')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('終了期間は開始期間より後に設定してください。')));
         return;
       }
 
       setState(() {
         if (isStartDate) {
-          if (_selectedPeriod == Period.year) {
-            _startDate = DateTime(newDate.year, 1, 1);
-          } else {
-            _startDate = DateTime(newDate.year, newDate.month, 1);
-          }
+          _startDate = _selectedPeriod == Period.year
+              ? DateTime(newDate.year, 1, 1)
+              : DateTime(newDate.year, newDate.month, 1);
         } else {
-          if (_selectedPeriod == Period.year) {
-            _endDate = DateTime(newDate.year, 12, 31);
-          } else {
-            _endDate = DateTime(newDate.year, newDate.month + 1, 0);
-          }
+          _endDate = _selectedPeriod == Period.year
+              ? DateTime(newDate.year, 12, 31)
+              : DateTime(newDate.year, newDate.month + 1, 0);
         }
       });
     }
@@ -335,12 +313,10 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
       }
     }
 
-    return keys.map((k) {
-      final income = agg[k]?['income'] ?? 0;
-      final expense = agg[k]?['expense'] ?? 0;
-      final balance = income - expense;
-      return ChartData(k, income, expense, balance);
-    }).toList();
+    return keys
+        .map((k) => ChartData(k, agg[k]?['income'] ?? 0, agg[k]?['expense'] ?? 0,
+            (agg[k]?['income'] ?? 0) - (agg[k]?['expense'] ?? 0)))
+        .toList();
   }
 
   Widget _buildDatePickerButton({
@@ -354,45 +330,56 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
         OutlinedButton(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             side: BorderSide(color: Colors.grey.shade400),
           ),
           child: SizedBox(
             width: double.infinity,
-            height: 36,
+            height: 34,
             child: Center(
-                child: Text(valueText,
-                    style:
-                        const TextStyle(fontSize: 16, color: Colors.black87))),
+              child: Text(valueText, style: const TextStyle(fontSize: 15, color: Colors.black87)),
+            ),
           ),
         ),
         Positioned(
           top: -8,
-          left: 12,
+          left: 10,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             color: Theme.of(context).scaffoldBackgroundColor,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
-            ),
+            child: Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 11)),
           ),
         ),
       ],
     );
   }
 
+  ({int income, int expense, int balance}) _sumForRange(List<Transaction> txs) {
+    final inRange = txs
+        .where((t) => !t.date.isBefore(_startDate) && !t.date.isAfter(_endDate))
+        .toList();
+    final income = inRange.where((t) => t.type == 'income').fold<int>(0, (s, t) => s + t.amount);
+    final expense = inRange.where((t) => t.type == 'expense').fold<int>(0, (s, t) => s + t.amount);
+    return (income: income, expense: expense, balance: income - expense);
+  }
+
+  Map<DateTime, List<Transaction>> _groupByDay(List<Transaction> txs) {
+    final inRange =
+        txs.where((t) => !t.date.isBefore(_startDate) && !t.date.isAfter(_endDate)).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+    final map = <DateTime, List<Transaction>>{};
+    for (final t in inRange) {
+      final key = DateTime(t.date.year, t.date.month, t.date.day);
+      (map[key] ??= []).add(t);
+    }
+    return map;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final txs = context.select<TransactionViewModel, List<Transaction>>(
-        (vm) => vm.transactions);
+    final txs = context.select<TransactionViewModel, List<Transaction>>((vm) => vm.transactions);
     final data = _getChartData(txs);
-    final nf = NumberFormat('#,###');
 
     String periodText;
     switch (_selectedPeriod) {
@@ -410,13 +397,12 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     final periodToggle = TextButton.icon(
       style: TextButton.styleFrom(
         foregroundColor: Colors.black87,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-        fixedSize: const Size(80, 32),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        fixedSize: const Size(72, 30),
       ),
-      icon: const Icon(Icons.sync, size: 18),
-      label: Text(periodText),
+      icon: const Icon(Icons.sync, size: 16),
+      label: Text(periodText, style: const TextStyle(fontSize: 13)),
       onPressed: () {
         setState(() {
           final currentIndex = Period.values.indexOf(_selectedPeriod);
@@ -427,6 +413,14 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
       },
     );
 
+    // Summary numbers
+    final summary = _sumForRange(txs);
+
+    // Grouped table
+    final grouped = _groupByDay(txs);
+    final sectionDates = grouped.keys.toList()..sort((a, b) => a.compareTo(b));
+
+    // Date picker texts
     String startDateText, endDateText;
     switch (_selectedPeriod) {
       case Period.day:
@@ -443,207 +437,282 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
         break;
     }
 
-    final datePickerWidget = Row(
-      children: [
-        Expanded(
-          child: _buildDatePickerButton(
-            label: '開始',
-            valueText: startDateText,
-            onPressed: () {
-              if (_selectedPeriod == Period.day) {
-                _selectDay(context, isStartDate: true);
-              } else {
-                _selectPeriod(context, isStartDate: true);
-              }
-            },
+    final datePickerWidget = Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildDatePickerButton(
+              label: '開始',
+              valueText: startDateText,
+              onPressed: () {
+                if (_selectedPeriod == Period.day) {
+                  _selectDay(context, isStartDate: true);
+                } else {
+                  _selectPeriod(context, isStartDate: true);
+                }
+              },
+            ),
           ),
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.0),
-          child:
-              Text('～', style: TextStyle(fontSize: 16, color: Colors.black54)),
-        ),
-        Expanded(
-          child: _buildDatePickerButton(
-            label: '終了',
-            valueText: endDateText,
-            onPressed: () {
-              if (_selectedPeriod == Period.day) {
-                _selectDay(context, isStartDate: false);
-              } else {
-                _selectPeriod(context, isStartDate: false);
-              }
-            },
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6.0),
+            child: Text('～', style: TextStyle(fontSize: 15, color: Colors.black54)),
           ),
-        ),
-      ],
-    );
-
-    final inRange = txs
-        .where((t) => !t.date.isBefore(_startDate) && !t.date.isAfter(_endDate))
-        .toList();
-    final expensesList = inRange.where((t) => t.type == 'expense').toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-    final incomesList = inRange.where((t) => t.type == 'income').toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-
-    final totalExpense = expensesList.fold<int>(0, (s, t) => s + t.amount);
-    final totalIncome = incomesList.fold<int>(0, (s, t) => s + t.amount);
-    final totalNet = totalIncome - totalExpense;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('収支推移'),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: periodToggle,
+          Expanded(
+            child: _buildDatePickerButton(
+              label: '終了',
+              valueText: endDateText,
+              onPressed: () {
+                if (_selectedPeriod == Period.day) {
+                  _selectDay(context, isStartDate: false);
+                } else {
+                  _selectPeriod(context, isStartDate: false);
+                }
+              },
+            ),
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: datePickerWidget,
+    );
+
+    // Graph height: compact & responsive
+    final screenH = MediaQuery.of(context).size.height;
+    final graphHeight = (screenH * 0.24).clamp(160.0, 220.0);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          '収支推移',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(height: 16),
-              Card(
+        ),
+        centerTitle: true,
+        actions: [Padding(padding: const EdgeInsets.only(right: 6.0), child: periodToggle)],
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            datePickerWidget,
+            // Graph (compact)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Card(
+                elevation: 1,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(10),
                   child: SizedBox(
-                    height: 300,
+                    height: graphHeight,
                     width: double.infinity,
                     child: data.isEmpty
                         ? const Center(child: Text('データがありません'))
-                        : _StickyYAxisScrollableChart(
-                            data: data,
-                            period: _selectedPeriod,
-                          ),
+                        : _StickyYAxisScrollableChart(data: data, period: _selectedPeriod),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  _LegendDot(color: Colors.green, label: '収入'),
-                  SizedBox(width: 12),
-                  _LegendDot(color: Colors.red, label: '支出'),
-                  SizedBox(width: 12),
-                  _LegendDot(color: Colors.blue, label: '差分(累計)'),
+            ),
+            // Summary band (compact)
+            Container(
+              color: kBandBgColor,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: kSummaryTileHeight,
+                        child: _SummaryTileFrame(
+                          label: '収入',
+                          color: Colors.green,
+                          icon: Icons.trending_up,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '${Formatter.formatAmount(summary.income)}円',
+                              maxLines: 1,
+                              softWrap: false,
+                              textHeightBehavior: const TextHeightBehavior(
+                                applyHeightToFirstAscent: false,
+                                applyHeightToLastDescent: false,
+                              ),
+                              style: const TextStyle(
+                                fontSize: kSummaryAmountFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                                height: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: kSummaryTileHeight,
+                        child: _SummaryTileFrame(
+                          label: '支出',
+                          color: Colors.red,
+                          icon: Icons.trending_down,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '${Formatter.formatAmount(summary.expense)}円',
+                              maxLines: 1,
+                              softWrap: false,
+                              textHeightBehavior: const TextHeightBehavior(
+                                applyHeightToFirstAscent: false,
+                                applyHeightToLastDescent: false,
+                              ),
+                              style: const TextStyle(
+                                fontSize: kSummaryAmountFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                                height: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: kSummaryTileHeight,
+                        child: _SummaryTileFrame(
+                          label: '収支',
+                          color: Colors.blue,
+                          icon: Icons.stacked_line_chart,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '${Formatter.formatAmount(summary.balance)}円',
+                              maxLines: 1,
+                              softWrap: false,
+                              textHeightBehavior: const TextHeightBehavior(
+                                applyHeightToFirstAscent: false,
+                                applyHeightToLastDescent: false,
+                              ),
+                              style: const TextStyle(
+                                fontSize: kSummaryAmountFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                                height: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Table (scrolls)
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  // Column header
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _SimpleHeaderDelegate(
+                      minExtent: kTableHeaderMinH,
+                      maxExtent: kTableHeaderMaxH,
+                      builder: (context, shrinkOffset, overlapsContent) {
+                        return Container(
+                          color: kBandBgColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            children: const [
+                              Expanded(
+                                flex: 4,
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text('タグ',
+                                      style:
+                                          TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 6,
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text('メモ',
+                                      style:
+                                          TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 4,
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Text('金額',
+                                      style:
+                                          TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (sectionDates.isEmpty)
+                    const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(child: Text('この期間の取引はありません。')),
+                    )
+                  else ...[
+                    for (final d in sectionDates) ...[
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _SimpleHeaderDelegate(
+                          minExtent: kDateHeaderMinH,
+                          maxExtent: kDateHeaderMaxH,
+                          builder: (context, shrinkOffset, overlapsContent) {
+                            return Container(
+                              color: kBandBgColor,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                DateFormat('MM月dd日（E）', 'ja').format(d),
+                                style: const TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final t = grouped[d]![index];
+                            return _TxRowAnalysis(transaction: t);
+                          },
+                          childCount: grouped[d]!.length,
+                        ),
+                      ),
+                    ],
+                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                  ],
                 ],
               ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  child: Row(
-                    children: [
-                      _TotalCell(
-                          label: '収入',
-                          value: '${nf.format(totalIncome)} 円',
-                          color: Colors.green),
-                      const VerticalDivider(width: 24, thickness: 1),
-                      _TotalCell(
-                          label: '支出',
-                          value: '${nf.format(totalExpense)} 円',
-                          color: Colors.red),
-                      const VerticalDivider(width: 24, thickness: 1),
-                      _TotalCell(
-                          label: '差分(累計)',
-                          value: '${nf.format(totalNet)} 円',
-                          color: Colors.blue),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text('この期間の明細',
-                    style: Theme.of(context).textTheme.titleMedium),
-              ),
-              const SizedBox(height: 8),
-              _SectionHeader(title: '支出', color: Colors.red),
-              const SizedBox(height: 8),
-              if (expensesList.isEmpty)
-                const _EmptyNote(text: '支出の記録はありません')
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: expensesList.length,
-                  itemBuilder: (context, i) {
-                    final t = expensesList[i];
-                    return _TxCard(
-                      transaction: t,
-                      tag: _safeTag(t),
-                    );
-                  },
-                ),
-              const SizedBox(height: 16),
-              _SectionHeader(title: '収入', color: Colors.green),
-              const SizedBox(height: 8),
-              if (incomesList.isEmpty)
-                const _EmptyNote(text: '収入の記録はありません')
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: incomesList.length,
-                  itemBuilder: (context, i) {
-                    final t = incomesList[i];
-                    return _TxCard(
-                      transaction: t,
-                      tag: _safeTag(t),
-                    );
-                  },
-                ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  String _safeTag(Transaction t) {
-    try {
-      final dynamicTag = (t as dynamic).tag;
-      if (dynamicTag is String && dynamicTag.isNotEmpty) return dynamicTag;
-    } catch (_) {}
-    return '未分類';
-  }
-}
-
-class _LegendDot extends StatelessWidget {
-  const _LegendDot({required this.color, required this.label});
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 6),
-        Text(label),
-      ],
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// 固定Y軸＋横スクロール本体（折れ線は累計推移）
+// Fixed Y-axis + scrollable chart body
 // ─────────────────────────────────────────────────────────────
 class _StickyYAxisScrollableChart extends StatelessWidget {
   const _StickyYAxisScrollableChart({
@@ -654,20 +723,16 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
   final List<ChartData> data;
   final Period period;
 
-  // 左側の固定Y軸の幅を最小限に
   static const double _leftReserved = 14;
-
-  double _bottomReserved(double labelAngleDeg) => labelAngleDeg == 0 ? 24 : 40;
+  double _bottomReserved(double labelAngleDeg) => labelAngleDeg == 0 ? 22 : 36;
 
   @override
   Widget build(BuildContext context) {
     final labels = data.map((e) => e.date).toList();
     final incomes = data.map((e) => e.income.toDouble()).toList();
-    final expenses =
-        data.map((e) => (-e.expense).toDouble()).toList(); // 棒は負で下向き
-
-    // 累計折れ線
+    final expenses = data.map((e) => (-e.expense).toDouble()).toList();
     final cumulative = <double>[];
+
     double run = 0;
     for (int i = 0; i < labels.length; i++) {
       run += incomes[i] + expenses[i];
@@ -691,14 +756,11 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
     maxAbsY *= 1.1;
 
     final interval = _niceGridInterval(maxAbsY);
-    final step =
-        period == Period.day ? 56.0 : (period == Period.month ? 72.0 : 100.0);
+    final step = period == Period.day ? 52.0 : (period == Period.month ? 66.0 : 90.0);
 
     return LayoutBuilder(builder: (context, constraints) {
-      final plotWidth =
-          max(constraints.maxWidth - _leftReserved, step * labels.length);
+      final plotWidth = max(constraints.maxWidth - _leftReserved, step * labels.length);
 
-      // 左：Y軸側チャート
       final axisChart = LineChart(
         LineChartData(
           minX: 0,
@@ -709,20 +771,16 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
             show: true,
             drawVerticalLine: false,
             horizontalInterval: interval,
-            getDrawingHorizontalLine: (v) =>
-                FlLine(strokeWidth: 1, color: Colors.black12),
+            getDrawingHorizontalLine: (v) => FlLine(strokeWidth: 1, color: Colors.black12),
           ),
-          extraLinesData: ExtraLinesData(
-            horizontalLines: [
-              HorizontalLine(y: 0, color: Colors.black26, strokeWidth: 1),
-            ],
-          ),
+          extraLinesData:
+              ExtraLinesData(horizontalLines: [HorizontalLine(y: 0, color: Colors.black26, strokeWidth: 1)]),
           titlesData: FlTitlesData(
             topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
             rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                  showTitles: false, reservedSize: _bottomReserved(labelAngle)),
+              sideTitles:
+                  SideTitles(showTitles: false, reservedSize: _bottomReserved(labelAngle)),
             ),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
@@ -732,12 +790,12 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
                 getTitlesWidget: (v, meta) {
                   if (v == 0) {
                     return SideTitleWidget(
-                      meta: meta, // ← axisSide ではなく meta を渡す
+                      meta: meta,
                       space: 2,
                       child: Align(
                         alignment: Alignment.centerRight,
                         child: Transform.translate(
-                          offset: const Offset(0, -8),
+                          offset: const Offset(0, -6),
                           child: const Text(
                             '0',
                             textAlign: TextAlign.right,
@@ -745,10 +803,7 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
                               applyHeightToFirstAscent: false,
                               applyHeightToLastDescent: false,
                             ),
-                            style: TextStyle(
-                              fontSize: 12,
-                              height: 1.0,
-                            ),
+                            style: TextStyle(fontSize: 11, height: 1.0),
                           ),
                         ),
                       ),
@@ -773,7 +828,6 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
         ),
       );
 
-      // 右：グラフ本体（スクロール）
       final scrollChart = _UnifiedLineChart(
         labels: labels,
         incomes: incomes,
@@ -807,13 +861,12 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
   }
 }
 
-// 1つのLineChartで 棒(縦線) + 折れ線(累計) を描画（ツールチップ対応）
 class _UnifiedLineChart extends StatelessWidget {
   const _UnifiedLineChart({
     required this.labels,
     required this.incomes,
-    required this.expenses, // 負で渡す
-    required this.balances, // 累計
+    required this.expenses,
+    required this.balances,
     required this.maxAbsY,
     required this.labelAngleDeg,
     required this.labelStep,
@@ -847,7 +900,6 @@ class _UnifiedLineChart extends StatelessWidget {
     const netColor = Colors.blue;
     final nf = NumberFormat('#,###');
 
-    // 棒（縦線分）
     final incomeBars = <LineChartBarData>[];
     final expenseBars = <LineChartBarData>[];
     for (int i = 0; i < labels.length; i++) {
@@ -857,7 +909,7 @@ class _UnifiedLineChart extends StatelessWidget {
             spots: [FlSpot(i.toDouble(), 0), FlSpot(i.toDouble(), incomes[i])],
             isCurved: false,
             color: Colors.green,
-            barWidth: 12,
+            barWidth: 10,
             dotData: FlDotData(show: false),
             isStrokeCapRound: false,
           ),
@@ -869,7 +921,7 @@ class _UnifiedLineChart extends StatelessWidget {
             spots: [FlSpot(i.toDouble(), 0), FlSpot(i.toDouble(), expenses[i])],
             isCurved: false,
             color: Colors.red,
-            barWidth: 12,
+            barWidth: 10,
             dotData: FlDotData(show: false),
             isStrokeCapRound: false,
           ),
@@ -877,33 +929,26 @@ class _UnifiedLineChart extends StatelessWidget {
       }
     }
 
-    // 折れ線（差分(累計)）
     final balanceLine = LineChartBarData(
-      spots: [
-        for (int i = 0; i < labels.length; i++)
-          FlSpot(i.toDouble(), balances[i])
-      ],
+      spots: [for (int i = 0; i < labels.length; i++) FlSpot(i.toDouble(), balances[i])],
       isCurved: false,
       color: netColor,
       barWidth: 2,
       dotData: FlDotData(show: true),
     );
 
-    // X軸タイトル（整数のみ + 間引き）
     Widget bottomTitle(double value, TitleMeta meta) {
       const eps = 0.0001;
-      if ((value - value.roundToDouble()).abs() > eps) {
-        return const SizedBox.shrink();
-      }
+      if ((value - value.roundToDouble()).abs() > eps) return const SizedBox.shrink();
       final idx = value.toInt();
       if (idx < 0 || idx >= labels.length) return const SizedBox.shrink();
       if (idx % labelStep != 0) return const SizedBox.shrink();
       return SideTitleWidget(
-        meta: meta, // ← axisSide ではなく meta
-        space: 6,
+        meta: meta,
+        space: 4,
         child: Transform.rotate(
           angle: labelAngleDeg * pi / 180.0,
-          child: Text(labels[idx], style: const TextStyle(fontSize: 10)),
+          child: Text(labels[idx], style: const TextStyle(fontSize: 9)),
         ),
       );
     }
@@ -918,18 +963,13 @@ class _UnifiedLineChart extends StatelessWidget {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: horizontalInterval,
-          getDrawingHorizontalLine: (v) =>
-              FlLine(strokeWidth: 1, color: Colors.black12),
+          getDrawingHorizontalLine: (v) => FlLine(strokeWidth: 1, color: Colors.black12),
         ),
-        extraLinesData: ExtraLinesData(
-          horizontalLines: [
-            HorizontalLine(y: 0, color: Colors.black26, strokeWidth: 1),
-          ],
-        ),
+        extraLinesData:
+            ExtraLinesData(horizontalLines: [HorizontalLine(y: 0, color: Colors.black26, strokeWidth: 1)]),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -946,7 +986,7 @@ class _UnifiedLineChart extends StatelessWidget {
               getTitlesWidget: (v, meta) {
                 if (v == 0) {
                   return SideTitleWidget(
-                    meta: meta, // ← axisSide ではなく meta
+                    meta: meta,
                     space: 0,
                     child: Align(
                       alignment: Alignment.centerRight,
@@ -959,10 +999,7 @@ class _UnifiedLineChart extends StatelessWidget {
                             applyHeightToFirstAscent: false,
                             applyHeightToLastDescent: false,
                           ),
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.0,
-                          ),
+                          style: TextStyle(fontSize: 11, height: 1.0),
                         ),
                       ),
                     ),
@@ -979,12 +1016,10 @@ class _UnifiedLineChart extends StatelessWidget {
             top: const BorderSide(color: Colors.black12, width: 1),
             right: const BorderSide(color: Colors.black12, width: 1),
             left: BorderSide(
-                color: drawLeftBorder ? Colors.black12 : Colors.transparent,
-                width: 1),
+                color: drawLeftBorder ? Colors.black12 : Colors.transparent, width: 1),
             bottom: const BorderSide(color: Colors.black12, width: 1),
           ),
         ),
-        // ツールチップ（差分まとめ）
         lineTouchData: LineTouchData(
           enabled: true,
           handleBuiltInTouches: true,
@@ -992,131 +1027,84 @@ class _UnifiedLineChart extends StatelessWidget {
           touchTooltipData: LineTouchTooltipData(
             fitInsideHorizontally: true,
             fitInsideVertically: true,
-            // tooltipBgColor は 1.0.0 では未定義のため削除
             getTooltipItems: (touchedSpots) {
               if (touchedSpots.isEmpty) return const [];
-              final idx =
-                  touchedSpots.first.x.round().clamp(0, labels.length - 1);
+              final idx = touchedSpots.first.x.round().clamp(0, labels.length - 1);
               final parts = <String>[];
-              if (incomes[idx] != 0) {
-                parts.add('収入: ${nf.format(incomes[idx])}');
-              }
-              if (expenses[idx] != 0) {
-                parts.add('支出: ${nf.format(-expenses[idx])}');
-              }
+              if (incomes[idx] != 0) parts.add('収入: ${nf.format(incomes[idx])}');
+              if (expenses[idx] != 0) parts.add('支出: ${nf.format(-expenses[idx])}');
               parts.add('差分(累計): ${nf.format(balances[idx])}');
-              final text = '${labels[idx]}\n${parts.join('\n')}';
               return [
                 for (int i = 0; i < touchedSpots.length; i++)
-                  i == 0
-                      ? const LineTooltipItem(
-                          '', TextStyle()) // 1つだけ描画（中身は below）
-                      : null
+                  i == 0 ? const LineTooltipItem('', TextStyle()) : null
               ];
             },
-            // fl_chart では Tooltip の本文は getTooltipItems で返す LineTooltipItem ごとに描画されます。
-            // 1つにまとめたい場合は上記実装のままでもOK。その場合、実際のテキストは最初の item に載せます。
-            // ここでは LineTooltipItem の text を空にしているため、代わりに描画側の default を利用します。
           ),
         ),
-        lineBarsData: [
-          ...incomeBars,
-          ...expenseBars,
-          balanceLine,
-        ],
+        lineBarsData: [...incomeBars, ...expenseBars, balanceLine],
       ),
     );
   }
 }
 
-// ── 明細UI ─────────────────
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.color});
-  final String title;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-            width: 6,
-            height: 18,
-            decoration: BoxDecoration(
-                color: color, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 8),
-        Text(title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-}
-
-class _EmptyNote extends StatelessWidget {
-  const _EmptyNote({required this.text});
-  final String text;
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.info_outline),
-        title: Text(text),
-      ),
-    );
-  }
-}
-
-class _TxCard extends StatelessWidget {
-  const _TxCard({
-    required this.transaction,
-    required this.tag,
+// ===== Calendar summary card look (compact) =====
+class _SummaryTileFrame extends StatelessWidget {
+  const _SummaryTileFrame({
+    required this.label,
+    required this.color,
+    required this.icon,
+    required this.child,
   });
 
-  final Transaction transaction;
-  final String tag;
+  final String label;
+  final Color color;
+  final IconData icon;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final nf = NumberFormat('#,###');
-    final isIncome = transaction.type == 'income';
-    final color = isIncome ? Colors.green : Colors.red;
-    final amountText =
-        '${isIncome ? '+' : '-'}${nf.format(transaction.amount)} 円';
-    final d = DateFormat('yyyy/MM/dd').format(transaction.date);
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+    final tileColor = Theme.of(context).cardColor;
+    return Material(
+      color: tileColor,
+      borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              isIncome ? Icons.add_circle : Icons.remove_circle,
-              color: color,
-              size: 32,
+            Row(
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      textHeightBehavior: const TextHeightBehavior(
+                        applyHeightToFirstAscent: false,
+                        applyHeightToLastDescent: false,
+                      ),
+                      style: TextStyle(
+                        fontSize: kSummaryLabelFontSize,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(icon, size: 14, color: color),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(tag,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 2),
-                  Text(d,
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              amountText,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
+            const SizedBox(height: 2),
+            SizedBox(
+              height: kSummaryAmountLineHeight,
+              child: Align(alignment: Alignment.centerLeft, child: child),
             ),
           ],
         ),
@@ -1125,43 +1113,108 @@ class _TxCard extends StatelessWidget {
   }
 }
 
-// サマリー用セル
-class _TotalCell extends StatelessWidget {
-  const _TotalCell(
-      {required this.label, required this.value, required this.color});
-  final String label;
-  final String value;
-  final Color color;
+// ===== Simple SliverPersistentHeader delegate =====
+class _SimpleHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _SimpleHeaderDelegate({
+    required this.minExtent,
+    required this.maxExtent,
+    required this.builder,
+  });
+
+  @override
+  final double minExtent;
+  @override
+  final double maxExtent;
+
+  final Widget Function(BuildContext context, double shrinkOffset, bool overlapsContent) builder;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return builder(context, shrinkOffset, overlapsContent);
+  }
+
+  @override
+  bool shouldRebuild(covariant _SimpleHeaderDelegate oldDelegate) {
+    return minExtent != oldDelegate.minExtent ||
+        maxExtent != oldDelegate.maxExtent ||
+        builder != oldDelegate.builder;
+  }
+}
+
+// ===== Calendar-like row for analysis table (no delete/tap) =====
+class _TxRowAnalysis extends StatelessWidget {
+  const _TxRowAnalysis({required this.transaction});
+
+  final Transaction transaction;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(color: Colors.grey[700], fontSize: 12)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 16),
+    final isIncome = transaction.type == 'income';
+    final color = isIncome ? Colors.green : Colors.red;
+
+    final memo = (transaction.memo ?? '').isEmpty ? '－' : transaction.memo!;
+    final prefix = isIncome ? '+' : '-';
+
+    return SizedBox(
+      height: kTxRowHeight,
+      child: Material(
+        color: Theme.of(context).cardColor,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Icon(isIncome ? Icons.add_circle : Icons.remove_circle, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 4,
+                child: Text(
+                  transaction.tag,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 6,
+                child: Text(
+                  memo,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 4,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '$prefix${Formatter.formatAmount(transaction.amount)}円',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-// ── 集計用データクラス ─────────────────
+// ===== Data class =====
 class ChartData {
   ChartData(this.date, this.income, this.expense, this.balance);
-  final String date; // ラベル（MM/dd, yy/MM, yyyy）
-  final int income; // 正
-  final int expense; // 正（集計時に負に変換）
-  final int balance; // 単月/日/年の差分
+  final String date; // MM/dd, yy/MM, yyyy
+  final int income;
+  final int expense;
+  final int balance;
 }
 
-/// 左右のチャートで共有する“きれいな”水平グリッド間隔を作る
+// ===== Grid interval helper =====
 double _niceGridInterval(double maxAbsY) {
   final target = maxAbsY / 5;
   final pow10 = pow(10, (log(target) / log(10)).floor()).toDouble();

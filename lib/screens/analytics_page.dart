@@ -65,6 +65,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         : now.year - 2000;
   }
 
+  int _calculateInitialPageFromDate(DateTime date) {
+    return _viewType == _ViewType.month
+        ? (date.year - 2000) * 12 + date.month - 1
+        : date.year - 2000;
+  }
+
   void _onPageChanged(int page) {
     setState(() {
       if (_viewType == _ViewType.month) {
@@ -80,6 +86,27 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       }
     });
   }
+
+  // BalanceAnalysisPage のトグルデザインを流用（“月/年”のみ）
+  Widget get _monthYearToggle => TextButton.icon(
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.black87,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          fixedSize: const Size(80, 32),
+        ),
+        icon: const Icon(Icons.sync, size: 18),
+        label: Text(_viewType == _ViewType.month ? '月' : '年'),
+        onPressed: () {
+          setState(() {
+            _viewType =
+                _viewType == _ViewType.month ? _ViewType.year : _ViewType.month;
+            _focusedDate = DateTime.now();
+            _pageController.jumpToPage(_calculateInitialPage());
+          });
+        },
+      );
 
   Future<void> _selectDate(BuildContext context) async {
     final now = DateTime.now();
@@ -99,30 +126,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 children: [
                   Expanded(
                     child: CupertinoPicker(
-                      scrollController: FixedExtentScrollController(
-                          initialItem: selectedYear - 2000),
+                      scrollController:
+                          FixedExtentScrollController(initialItem: selectedYear - 2000),
                       itemExtent: 40.0,
                       onSelectedItemChanged: (i) => selectedYear = 2000 + i,
                       children: List.generate(
                         DateTime.now().year - 2000 + 2,
                         (i) => Center(
-                          child: Text('${2000 + i}年',
-                              style: const TextStyle(fontSize: 20)),
+                          child: Text('${2000 + i}年', style: const TextStyle(fontSize: 20)),
                         ),
                       ),
                     ),
                   ),
                   Expanded(
                     child: CupertinoPicker(
-                      scrollController: FixedExtentScrollController(
-                          initialItem: selectedMonth - 1),
+                      scrollController:
+                          FixedExtentScrollController(initialItem: selectedMonth - 1),
                       itemExtent: 40.0,
                       onSelectedItemChanged: (i) => selectedMonth = i + 1,
                       children: List.generate(
                         12,
                         (i) => Center(
-                          child: Text('${i + 1}月',
-                              style: const TextStyle(fontSize: 20)),
+                          child: Text('${i + 1}月', style: const TextStyle(fontSize: 20)),
                         ),
                       ),
                     ),
@@ -146,8 +171,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   final selectedDate = DateTime(selectedYear, selectedMonth);
                   if (selectedDate.isAfter(oneYearLater)) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('1年後より未来の月は選択できません')),
+                      const SnackBar(content: Text('1年後より未来の月は選択できません')),
                     );
                     return;
                   }
@@ -162,8 +186,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         if (pickedDate != null && pickedDate is DateTime) {
           setState(() {
             _focusedDate = pickedDate;
-            _pageController
-                .jumpToPage(_calculateInitialPageFromDate(pickedDate));
+            _pageController.jumpToPage(_calculateInitialPageFromDate(pickedDate));
           });
         }
       });
@@ -177,15 +200,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               width: 150,
               height: 200,
               child: CupertinoPicker(
-                scrollController: FixedExtentScrollController(
-                    initialItem: selectedYear - 2000),
+                scrollController:
+                    FixedExtentScrollController(initialItem: selectedYear - 2000),
                 itemExtent: 40.0,
                 onSelectedItemChanged: (i) => selectedYear = 2000 + i,
                 children: List.generate(
                   DateTime.now().year - 2000 + 2,
                   (i) => Center(
-                    child: Text('${2000 + i}年',
-                        style: const TextStyle(fontSize: 20)),
+                    child: Text('${2000 + i}年', style: const TextStyle(fontSize: 20)),
                   ),
                 ),
               ),
@@ -206,8 +228,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   final selectedDate = DateTime(selectedYear);
                   if (selectedDate.isAfter(oneYearLater)) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('1年後より未来の年は選択できません')),
+                      const SnackBar(content: Text('1年後より未来の年は選択できません')),
                     );
                     return;
                   }
@@ -222,26 +243,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         if (pickedDate != null && pickedDate is DateTime) {
           setState(() {
             _focusedDate = pickedDate;
-            _pageController
-                .jumpToPage(_calculateInitialPageFromDate(pickedDate));
+            _pageController.jumpToPage(_calculateInitialPageFromDate(pickedDate));
           });
         }
       });
     }
   }
 
-  int _calculateInitialPageFromDate(DateTime date) {
-    return _viewType == _ViewType.month
-        ? (date.year - 2000) * 12 + date.month - 1
-        : date.year - 2000;
-  }
-
   Map<String, int> _calculateSummary(List<Transaction> all) {
     int income = 0, expense = 0;
     final inPeriod = all.where((t) {
       if (_viewType == _ViewType.month) {
-        return t.date.year == _focusedDate.year &&
-            t.date.month == _focusedDate.month;
+        return t.date.year == _focusedDate.year && t.date.month == _focusedDate.month;
       } else {
         return t.date.year == _focusedDate.year;
       }
@@ -285,23 +298,27 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 _viewType == _ViewType.month
                     ? DateFormat('yyyy年MM月').format(_focusedDate)
                     : DateFormat('yyyy年').format(_focusedDate),
-                style: Theme.of(context).textTheme.titleLarge,
+                // カレンダー画面のヘッダースタイルに揃える
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
               const Icon(Icons.arrow_drop_down),
             ],
           ),
         ),
         centerTitle: true,
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: _MonthYearSwitcherWrapper(),
+            padding: const EdgeInsets.only(right: 8.0),
+            child: _monthYearToggle, // ← 右上トグル（“月/年”）
           ),
         ],
       ),
       body: Column(
         children: [
-          // Summary（修正：Padding に `padding:` を追加）
+          // Summary
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Padding(
@@ -448,7 +465,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       currentDate: currentDate,
       selectedTransactionType: _selectedTransactionType,
       focusedDate: _focusedDate,
-      viewType: _viewType,
+      viewType: _ViewType.values[_viewType.index],
       gentleColors: _gentleColors,
       showSwipeHint: showSwipeHint,
     );
@@ -560,8 +577,7 @@ class _SummaryTileState extends State<_SummaryTile> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Icon(Icons.chevron_right,
-                            size: 16, color: Colors.grey[600]),
+                        Icon(Icons.chevron_right, size: 16, color: Colors.grey[600]),
                       ],
                     ),
                   ),
@@ -637,11 +653,11 @@ class _ChartPageContentState extends State<_ChartPageContent>
 
     return SingleChildScrollView(
       child: Padding(
-        padding:
-            const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 8.0), // ← 修正
+        padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 円グラフ
             SizedBox(
               height: 300,
               child: Stack(
@@ -674,8 +690,7 @@ class _ChartPageContentState extends State<_ChartPageContent>
                           ),
                         ),
                         pointColorMapper: (e, i) => widget.gentleColors[
-                            allTagsEver.indexOf(e.key) %
-                                widget.gentleColors.length],
+                            allTagsEver.indexOf(e.key) % widget.gentleColors.length],
                       ),
                     ],
                   ),
@@ -706,8 +721,7 @@ class _ChartPageContentState extends State<_ChartPageContent>
                             MaterialPageRoute(
                               builder: (_) => TagDetailPage(
                                 tagName: tag,
-                                transactions: widget.transactionViewModel
-                                    .transactions
+                                transactions: widget.transactionViewModel.transactions
                                     .where((t) =>
                                         t.tag == tag &&
                                         t.type == widget.selectedTransactionType)
@@ -754,8 +768,7 @@ class _ChartPageContentState extends State<_ChartPageContent>
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(Icons.chevron_right,
-                                size: 16, color: Colors.grey),
+                            const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -777,7 +790,7 @@ class _GraphSwipeHintOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: Padding(
-        padding: const EdgeInsets.only(top: 100.0), // ← 修正
+        padding: const EdgeInsets.only(top: 100.0),
         child: Center(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -792,179 +805,11 @@ class _GraphSwipeHintOverlay extends StatelessWidget {
                   Icon(Icons.chevron_left, color: Colors.white),
                   SizedBox(width: 8),
                   Text('左右にスワイプ',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600)),
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                   SizedBox(width: 8),
                   Icon(Icons.chevron_right, color: Colors.white),
                 ],
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MonthYearSwitcherWrapper extends StatefulWidget {
-  const _MonthYearSwitcherWrapper({super.key});
-
-  @override
-  State<_MonthYearSwitcherWrapper> createState() =>
-      _MonthYearSwitcherWrapperState();
-}
-
-class _MonthYearSwitcherWrapperState
-    extends State<_MonthYearSwitcherWrapper> {
-  @override
-  Widget build(BuildContext context) {
-    final state = context.findAncestorStateOfType<_AnalyticsPageState>();
-    if (state == null) return const SizedBox.shrink();
-    return _MonthYearSwitcher(
-      viewType: state._viewType,
-      onToggle: () {
-        state.setState(() {
-          state._viewType =
-              state._viewType == _ViewType.month ? _ViewType.year : _ViewType.month;
-          state._focusedDate = DateTime.now();
-          state._pageController.jumpToPage(state._calculateInitialPage());
-        });
-      },
-    );
-  }
-}
-
-class _MonthYearSwitcher extends StatelessWidget {
-  final _ViewType viewType;
-  final VoidCallback onToggle;
-  const _MonthYearSwitcher({
-    required this.viewType,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final active = Colors.orange.shade700;
-    final inactive =
-        Theme.of(context).textTheme.titleLarge?.color ?? Colors.black87;
-
-    const double containerWidth = 84;
-    const double containerHeight = 40;
-    const double leftSlot = 20.0;
-    const double rightSlot = 40.0;
-    const double badgeSize = 38.0;
-
-    final bool isMonth = viewType == _ViewType.month;
-
-    final double monthTop = isMonth ? 0.0 : -6.0;
-    final double monthScale = isMonth ? 1.0 : 0.80;
-    final double monthOpacity = isMonth ? 1.0 : 0.55;
-
-    final double yearTop = isMonth ? -6.0 : 0.0;
-    final double yearScale = isMonth ? 0.80 : 1.0;
-    final double yearOpacity = isMonth ? 0.55 : 1.0;
-
-    final monthBadge = _AnimatedBadge(
-      key: const ValueKey('month'),
-      left: leftSlot,
-      top: monthTop,
-      label: '月',
-      isActive: isMonth,
-      activeColor: active,
-      inactiveColor: inactive,
-      scale: monthScale,
-      opacity: monthOpacity,
-      size: badgeSize,
-    );
-
-    final yearBadge = _AnimatedBadge(
-      key: const ValueKey('year'),
-      left: rightSlot,
-      top: yearTop,
-      label: '年',
-      isActive: !isMonth,
-      activeColor: active,
-      inactiveColor: inactive,
-      scale: yearScale,
-      opacity: yearOpacity,
-      size: badgeSize,
-    );
-
-    final children =
-        isMonth ? <Widget>[yearBadge, monthBadge] : <Widget>[monthBadge, yearBadge];
-
-    return InkWell(
-      onTap: onToggle,
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        width: containerWidth,
-        height: containerHeight,
-        child: Stack(clipBehavior: Clip.none, children: children),
-      ),
-    );
-  }
-}
-
-class _AnimatedBadge extends StatelessWidget {
-  final double left;
-  final double top;
-  final String label;
-  final bool isActive;
-  final Color activeColor;
-  final Color inactiveColor;
-  final double scale;
-  final double opacity;
-  final double size;
-
-  const _AnimatedBadge({
-    super.key,
-    required this.left,
-    required this.top,
-    required this.label,
-    required this.isActive,
-    required this.activeColor,
-    required this.inactiveColor,
-    required this.scale,
-    required this.opacity,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive ? activeColor : inactiveColor;
-
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeInOut,
-      left: left,
-      top: top,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeInOut,
-        opacity: opacity,
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeInOut,
-          scale: scale,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(Icons.calendar_today_outlined, size: size - 8, color: color),
-                Positioned(
-                  bottom: 6,
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: color,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
         ),
