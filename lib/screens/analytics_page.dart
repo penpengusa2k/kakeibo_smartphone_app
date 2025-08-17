@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +10,11 @@ import 'package:kakeibo_smartphone_app/screens/total_amount_detail_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:kakeibo_smartphone_app/screens/balance_analysis_page.dart';
 
+const double kSummaryTileHeight = 56;
+const double kSummaryAmountLineHeight = 22;
+const double kSummaryLabelFontSize = 12;
+const double kSummaryAmountFontSize = 14;
+
 enum _ViewType { month, year }
 
 class AnalyticsPage extends StatefulWidget {
@@ -22,25 +26,24 @@ class AnalyticsPage extends StatefulWidget {
 
 class _AnalyticsPageState extends State<AnalyticsPage> {
   DateTime _focusedDate = DateTime.now();
-  String _selectedTransactionType = 'expense'; // 'income' or 'expense'
+  String _selectedTransactionType = 'expense';
   _ViewType _viewType = _ViewType.month;
   late PageController _pageController;
 
-  // 初回のみ表示。ユーザー操作があれば即非表示。
   bool _showSwipeHint = true;
   bool _userInteracted = false;
 
   static const List<Color> _gentleColors = [
-    Color(0xFF64B5F6), // Blue 300
-    Color(0xFFFFB74D), // Orange 300
-    Color(0xFF9575CD), // Deep Purple 300
-    Color(0xFF4DB6AC), // Teal 300
-    Color(0xFFFFF176), // Yellow 300
-    Color(0xFFF06292), // Pink 300
-    Color(0xFF4DD0E1), // Cyan 300
-    Color(0xFFFF8A65), // Deep Orange 300
-    Color(0xFF90A4AE), // Blue Grey 300
-    Color(0xFFFFD54F), // Amber 300
+    Color(0xFF64B5F6),
+    Color(0xFFFFB74D),
+    Color(0xFF9575CD),
+    Color(0xFF4DB6AC),
+    Color(0xFFFFF176),
+    Color(0xFFF06292),
+    Color(0xFF4DD0E1),
+    Color(0xFFFF8A65),
+    Color(0xFF90A4AE),
+    Color(0xFFFFD54F),
   ];
 
   @override
@@ -57,11 +60,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   int _calculateInitialPage() {
     final now = DateTime.now();
-    if (_viewType == _ViewType.month) {
-      return (now.year - 2000) * 12 + now.month - 1;
-    } else {
-      return now.year - 2000;
-    }
+    return _viewType == _ViewType.month
+        ? (now.year - 2000) * 12 + now.month - 1
+        : now.year - 2000;
   }
 
   void _onPageChanged(int page) {
@@ -71,10 +72,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         final month = page % 12 + 1;
         _focusedDate = DateTime(year, month);
       } else {
-        final year = 2000 + page;
-        _focusedDate = DateTime(year);
+        _focusedDate = DateTime(2000 + page);
       }
-      // ユーザーがスワイプしたら以後ヒントは出さない
       if (!_userInteracted) {
         _userInteracted = true;
         _showSwipeHint = false;
@@ -90,7 +89,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     if (_viewType == _ViewType.month) {
       await showDialog(
         context: context,
-        builder: (BuildContext context) {
+        builder: (context) {
           return AlertDialog(
             title: const Text('年月を選択', textAlign: TextAlign.center),
             content: SizedBox(
@@ -103,15 +102,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       scrollController: FixedExtentScrollController(
                           initialItem: selectedYear - 2000),
                       itemExtent: 40.0,
-                      onSelectedItemChanged: (int index) {
-                        selectedYear = 2000 + index;
-                      },
-                      children: List<Widget>.generate(
-                          DateTime.now().year - 2000 + 2, (int index) {
-                        return Center(
-                            child: Text('${2000 + index}年',
-                                style: const TextStyle(fontSize: 20)));
-                      }),
+                      onSelectedItemChanged: (i) => selectedYear = 2000 + i,
+                      children: List.generate(
+                        DateTime.now().year - 2000 + 2,
+                        (i) => Center(
+                          child: Text('${2000 + i}年',
+                              style: const TextStyle(fontSize: 20)),
+                        ),
+                      ),
                     ),
                   ),
                   Expanded(
@@ -119,14 +117,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       scrollController: FixedExtentScrollController(
                           initialItem: selectedMonth - 1),
                       itemExtent: 40.0,
-                      onSelectedItemChanged: (int index) {
-                        selectedMonth = index + 1;
-                      },
-                      children: List<Widget>.generate(12, (int index) {
-                        return Center(
-                            child: Text('${index + 1}月',
-                                style: const TextStyle(fontSize: 20)));
-                      }),
+                      onSelectedItemChanged: (i) => selectedMonth = i + 1,
+                      children: List.generate(
+                        12,
+                        (i) => Center(
+                          child: Text('${i + 1}月',
+                              style: const TextStyle(fontSize: 20)),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -148,7 +146,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   final selectedDate = DateTime(selectedYear, selectedMonth);
                   if (selectedDate.isAfter(oneYearLater)) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('1年後より未来の月は選択できません')),
+                      const SnackBar(
+                          content: Text('1年後より未来の月は選択できません')),
                     );
                     return;
                   }
@@ -169,10 +168,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         }
       });
     } else {
-      // Year Picker
       await showDialog(
         context: context,
-        builder: (BuildContext context) {
+        builder: (context) {
           return AlertDialog(
             title: const Text('年を選択', textAlign: TextAlign.center),
             content: SizedBox(
@@ -182,15 +180,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 scrollController: FixedExtentScrollController(
                     initialItem: selectedYear - 2000),
                 itemExtent: 40.0,
-                onSelectedItemChanged: (int index) {
-                  selectedYear = 2000 + index;
-                },
-                children: List<Widget>.generate(DateTime.now().year - 2000 + 2,
-                    (int index) {
-                  return Center(
-                      child: Text('${2000 + index}年',
-                          style: const TextStyle(fontSize: 20)));
-                }),
+                onSelectedItemChanged: (i) => selectedYear = 2000 + i,
+                children: List.generate(
+                  DateTime.now().year - 2000 + 2,
+                  (i) => Center(
+                    child: Text('${2000 + i}年',
+                        style: const TextStyle(fontSize: 20)),
+                  ),
+                ),
               ),
             ),
             actions: <Widget>[
@@ -209,7 +206,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   final selectedDate = DateTime(selectedYear);
                   if (selectedDate.isAfter(oneYearLater)) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('1年後より未来の年は選択できません')),
+                      const SnackBar(
+                          content: Text('1年後より未来の年は選択できません')),
                     );
                     return;
                   }
@@ -233,159 +231,174 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   int _calculateInitialPageFromDate(DateTime date) {
-    if (_viewType == _ViewType.month) {
-      return (date.year - 2000) * 12 + date.month - 1;
-    } else {
-      return date.year - 2000;
-    }
+    return _viewType == _ViewType.month
+        ? (date.year - 2000) * 12 + date.month - 1
+        : date.year - 2000;
   }
 
-  Map<String, int> _calculateSummary(List<Transaction> allTransactions) {
-    int totalIncome = 0;
-    int totalExpense = 0;
-
-    final transactionsInPeriod = allTransactions.where((t) {
+  Map<String, int> _calculateSummary(List<Transaction> all) {
+    int income = 0, expense = 0;
+    final inPeriod = all.where((t) {
       if (_viewType == _ViewType.month) {
         return t.date.year == _focusedDate.year &&
             t.date.month == _focusedDate.month;
       } else {
         return t.date.year == _focusedDate.year;
       }
-    }).toList();
-
-    for (var t in transactionsInPeriod) {
+    });
+    for (final t in inPeriod) {
       if (t.type == 'income') {
-        totalIncome += t.amount;
+        income += t.amount;
       } else {
-        totalExpense += t.amount;
+        expense += t.amount;
       }
     }
-    return {
-      'income': totalIncome,
-      'expense': totalExpense,
-      'balance': totalIncome - totalExpense,
-    };
+    return {'income': income, 'expense': expense, 'balance': income - expense};
+  }
+
+  List<String> _collectTagsByType(TransactionViewModel vm, String type) {
+    final tags = vm.transactions
+        .where((t) => t.type == type)
+        .map((t) => t.tag)
+        .toSet()
+        .toList()
+      ..sort();
+    return tags;
   }
 
   @override
   Widget build(BuildContext context) {
-    final transactionViewModel = Provider.of<TransactionViewModel>(context);
-    final summary = _calculateSummary(transactionViewModel.transactions);
+    final vm = Provider.of<TransactionViewModel>(context);
+    final summary = _calculateSummary(vm.transactions);
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.bar_chart, size: 26),
-              Text('支出推移', style: TextStyle(fontSize: 9)),
-            ],
-          ),
-          tooltip: '支出推移の分析',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const BalanceAnalysisPage()),
-            );
-          },
-        ),
+        leading: const SizedBox.shrink(),
         title: GestureDetector(
           onTap: () => _selectDate(context),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Opacity(
-                opacity: 0,
-                child: Icon(Icons.arrow_drop_down),
-              ),
+              const Opacity(opacity: 0, child: Icon(Icons.arrow_drop_down)),
               Text(
                 _viewType == _ViewType.month
                     ? DateFormat('yyyy年MM月').format(_focusedDate)
                     : DateFormat('yyyy年').format(_focusedDate),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              const Icon(Icons.arrow_drop_down)
+              const Icon(Icons.arrow_drop_down),
             ],
           ),
         ),
         centerTitle: true,
-        actions: [
+        actions: const [
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: TextButton.icon(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.black87,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                fixedSize: const Size(80, 32),
-              ),
-              icon: const Icon(Icons.sync, size: 18),
-              label: Text(_viewType == _ViewType.month ? '月' : '年'),
-              onPressed: () {
-                setState(() {
-                  _viewType = _viewType == _ViewType.month
-                      ? _ViewType.year
-                      : _ViewType.month;
-                  _focusedDate = DateTime.now();
-                  _pageController.jumpToPage(_calculateInitialPage());
-                });
-              },
-            ),
+            padding: EdgeInsets.only(right: 8.0),
+            child: _MonthYearSwitcherWrapper(),
           ),
         ],
       ),
       body: Column(
         children: [
-          // ▼ Summary Card（オーバーフロー対策）
+          // Summary（修正：Padding に `padding:` を追加）
           Card(
             margin: const EdgeInsets.all(8.0),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(12.0),
               child: Row(
-                // ここを camelCase の正しい値で
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: _buildSummaryItem('収入', summary['income']!, Colors.green),
+                    child: _SummaryTile(
+                      label: '収入',
+                      amount: summary['income']!,
+                      color: Colors.green,
+                      icon: Icons.trending_up,
+                      tooltip: '収入の月別合計推移へ',
+                      onTap: () {
+                        final tags = _collectTagsByType(vm, 'income');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TotalAmountDetailPage(
+                              transactions: vm.transactions
+                                  .where((t) => t.type == 'income')
+                                  .toList(),
+                              initialFocusedMonth: _focusedDate,
+                              selectedTransactionType: 'income',
+                              allTags: tags,
+                              tagColors: _gentleColors,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: _buildSummaryItem('支出', summary['expense']!, Colors.red),
+                    child: _SummaryTile(
+                      label: '支出',
+                      amount: summary['expense']!,
+                      color: Colors.red,
+                      icon: Icons.trending_down,
+                      tooltip: '支出の月別合計推移へ',
+                      onTap: () {
+                        final tags = _collectTagsByType(vm, 'expense');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TotalAmountDetailPage(
+                              transactions: vm.transactions
+                                  .where((t) => t.type == 'expense')
+                                  .toList(),
+                              initialFocusedMonth: _focusedDate,
+                              selectedTransactionType: 'expense',
+                              allTags: tags,
+                              tagColors: _gentleColors,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: _buildSummaryItem('収支', summary['balance']!, Colors.blue),
+                    child: _SummaryTile(
+                      label: '収支',
+                      amount: summary['balance']!,
+                      color: Colors.blue,
+                      icon: Icons.stacked_line_chart,
+                      tooltip: '収支推移（グラフ）へ',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BalanceAnalysisPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          // タイプ選択 (支出/収入)
+          // タイプ切替
           Padding(
             padding: const EdgeInsets.only(top: 8.0, bottom: 0.0),
             child: Center(
               child: CupertinoSlidingSegmentedControl<String>(
                 groupValue: _selectedTransactionType,
-                onValueChanged: (String? value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedTransactionType = value;
-                    });
-                  }
+                onValueChanged: (v) {
+                  if (v != null) setState(() => _selectedTransactionType = v);
                 },
-                children: const <String, Widget>{
+                children: const {
                   'expense': Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     child: Text('支出'),
                   ),
                   'income': Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     child: Text('収入'),
                   ),
                 },
@@ -393,7 +406,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ),
           ),
           Expanded(
-            // PointerDownでユーザー操作を検知してヒントを消す
             child: Listener(
               onPointerDown: (_) {
                 if (!_userInteracted) {
@@ -407,18 +419,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 controller: _pageController,
                 onPageChanged: _onPageChanged,
                 itemBuilder: (context, page) {
-                  DateTime currentDate;
-                  if (_viewType == _ViewType.month) {
-                    final year = 2000 + page ~/ 12;
-                    final month = page % 12 + 1;
-                    currentDate = DateTime(year, month);
-                  } else {
-                    final year = 2000 + page;
-                    currentDate = DateTime(year);
-                  }
+                  final currentDate = _viewType == _ViewType.month
+                      ? DateTime(2000 + page ~/ 12, page % 12 + 1)
+                      : DateTime(2000 + page);
                   return _buildChartPage(
                     context,
-                    transactionViewModel,
+                    vm,
                     currentDate,
                     showSwipeHint: _showSwipeHint && !_userInteracted,
                   );
@@ -431,48 +437,140 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  // ▼ サマリー：金額は万省略ナシ＆FittedBoxで自動縮小（はみ出し防止）
-  Widget _buildSummaryItem(String title, int amount, Color color) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
-            maxLines: 1,
-            softWrap: false,
-          ),
-        ),
-        const SizedBox(height: 4),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            '${Formatter.formatAmount(amount)}円',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
-            maxLines: 1,
-            softWrap: false,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildChartPage(
-      BuildContext context,
-      TransactionViewModel transactionViewModel,
-      DateTime currentDate, {
-        required bool showSwipeHint,
-      }) {
+    BuildContext context,
+    TransactionViewModel vm,
+    DateTime currentDate, {
+    required bool showSwipeHint,
+  }) {
     return _ChartPageContent(
-      transactionViewModel: transactionViewModel,
+      transactionViewModel: vm,
       currentDate: currentDate,
       selectedTransactionType: _selectedTransactionType,
       focusedDate: _focusedDate,
-      viewType: _ViewType.month == _viewType ? _ViewType.month : _ViewType.year,
+      viewType: _viewType,
       gentleColors: _gentleColors,
       showSwipeHint: showSwipeHint,
+    );
+  }
+}
+
+class _SummaryTile extends StatefulWidget {
+  const _SummaryTile({
+    required this.label,
+    required this.amount,
+    required this.color,
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  final String label;
+  final int amount;
+  final Color color;
+  final IconData icon;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  State<_SummaryTile> createState() => _SummaryTileState();
+}
+
+class _SummaryTileState extends State<_SummaryTile> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tileColor = Theme.of(context).cardColor;
+
+    return Semantics(
+      button: true,
+      hint: widget.tooltip,
+      child: Material(
+        color: tileColor,
+        elevation: _pressed ? 2 : 0,
+        borderRadius: BorderRadius.circular(10),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: widget.onTap,
+          onHighlightChanged: (v) => setState(() => _pressed = v),
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(
+            height: kSummaryTileHeight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            widget.label,
+                            maxLines: 1,
+                            softWrap: false,
+                            textHeightBehavior: const TextHeightBehavior(
+                              applyHeightToFirstAscent: false,
+                              applyHeightToLastDescent: false,
+                            ),
+                            style: TextStyle(
+                              fontSize: kSummaryLabelFontSize,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                              height: 1.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(widget.icon, size: 14, color: widget.color),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  SizedBox(
+                    height: kSummaryAmountLineHeight,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '${Formatter.formatAmount(widget.amount)}円',
+                                maxLines: 1,
+                                softWrap: false,
+                                textHeightBehavior: const TextHeightBehavior(
+                                  applyHeightToFirstAscent: false,
+                                  applyHeightToLastDescent: false,
+                                ),
+                                style: TextStyle(
+                                  fontSize: kSummaryAmountFontSize,
+                                  fontWeight: FontWeight.bold,
+                                  color: widget.color,
+                                  height: 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(Icons.chevron_right,
+                            size: 16, color: Colors.grey[600]),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -516,25 +614,21 @@ class _ChartPageContentState extends State<_ChartPageContent>
         .toList()
       ..sort();
 
-    final filteredTransactions =
-        widget.transactionViewModel.transactions.where((t) {
-      bool isInPeriod;
-      if (widget.viewType == _ViewType.month) {
-        isInPeriod = t.date.year == widget.currentDate.year &&
-            t.date.month == widget.currentDate.month;
-      } else {
-        isInPeriod = t.date.year == widget.currentDate.year;
-      }
-      return isInPeriod && t.type == widget.selectedTransactionType;
+    final filtered = widget.transactionViewModel.transactions.where((t) {
+      final inPeriod = widget.viewType == _ViewType.month
+          ? (t.date.year == widget.currentDate.year &&
+              t.date.month == widget.currentDate.month)
+          : (t.date.year == widget.currentDate.year);
+      return inPeriod && t.type == widget.selectedTransactionType;
     }).toList();
 
     int totalAmount = 0;
-    for (var t in filteredTransactions) {
+    for (var t in filtered) {
       totalAmount += t.amount;
     }
 
     final Map<String, double> dataByCategory = {};
-    for (var t in filteredTransactions) {
+    for (var t in filtered) {
       dataByCategory[t.tag] = (dataByCategory[t.tag] ?? 0) + t.amount;
     }
 
@@ -543,7 +637,8 @@ class _ChartPageContentState extends State<_ChartPageContent>
 
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 8.0),
+        padding:
+            const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 8.0), // ← 修正
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -561,22 +656,14 @@ class _ChartPageContentState extends State<_ChartPageContent>
                     series: <CircularSeries>[
                       PieSeries<MapEntry<String, double>, String>(
                         dataSource: sortedEntries,
-                        xValueMapper: (MapEntry<String, double> data, _) =>
-                            data.key,
-                        yValueMapper: (MapEntry<String, double> data, _) =>
-                            data.value,
-                        dataLabelMapper: (MapEntry<String, double> data, _) {
+                        xValueMapper: (e, _) => e.key,
+                        yValueMapper: (e, _) => e.value,
+                        dataLabelMapper: (e, _) {
                           final total = totalAmount;
-                          final percentage =
-                              total > 0 ? (data.value / total * 100) : 0.0;
-                          String percentageText;
-                          if (percentage > 0 && percentage < 0.1) {
-                            percentageText = '<0.1%';
-                          } else {
-                            percentageText =
-                                '${percentage.toStringAsFixed(1)}%';
-                          }
-                          return '${data.key}\n$percentageText';
+                          final p = total > 0 ? (e.value / total * 100) : 0.0;
+                          final pt =
+                              (p > 0 && p < 0.1) ? '<0.1%' : '${p.toStringAsFixed(1)}%';
+                          return '${e.key}\n$pt';
                         },
                         dataLabelSettings: const DataLabelSettings(
                           isVisible: true,
@@ -586,76 +673,14 @@ class _ChartPageContentState extends State<_ChartPageContent>
                             length: '10%',
                           ),
                         ),
-                        pointColorMapper:
-                            (MapEntry<String, double> data, int index) =>
-                                widget.gentleColors[
-                                    allTagsEver.indexOf(data.key) %
-                                        widget.gentleColors.length],
-                      )
+                        pointColorMapper: (e, i) => widget.gentleColors[
+                            allTagsEver.indexOf(e.key) %
+                                widget.gentleColors.length],
+                      ),
                     ],
                   ),
                   if (widget.showSwipeHint) const _GraphSwipeHintOverlay(),
                 ],
-              ),
-            ),
-            const SizedBox(height: 16.0),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TotalAmountDetailPage(
-                      transactions: widget.transactionViewModel.transactions
-                          .where(
-                              (t) => t.type == widget.selectedTransactionType)
-                          .toList(),
-                      initialFocusedMonth: widget.focusedDate,
-                      selectedTransactionType: widget.selectedTransactionType,
-                      allTags: allTagsEver,
-                      tagColors: widget.gentleColors,
-                    ),
-                  ),
-                );
-              },
-              child: Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 12.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('合計',
-                          style: Theme.of(context).textTheme.titleMedium),
-                      Row(
-                        children: [
-                          // 合計金額は画面幅に合わせて縮小
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '${Formatter.formatAmount(totalAmount)}円',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: widget.selectedTransactionType ==
-                                            'income'
-                                        ? Colors.green
-                                        : Colors.red,
-                                  ),
-                              maxLines: 1,
-                              softWrap: false,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward_ios,
-                              size: 18.0, color: Colors.grey),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
             const SizedBox(height: 8.0),
@@ -669,12 +694,9 @@ class _ChartPageContentState extends State<_ChartPageContent>
                   final tag = entry.key;
                   final amount = entry.value;
                   final total = totalAmount;
-                  final percentage =
-                      total > 0 ? (amount / total * 100) : 0.0;
-                  final String percentageText =
-                      (percentage > 0 && percentage < 0.1)
-                          ? '<0.1'
-                          : percentage.toStringAsFixed(1);
+                  final p = total > 0 ? (amount / total * 100) : 0.0;
+                  final pText = (p > 0 && p < 0.1) ? '<0.1' : p.toStringAsFixed(1);
+
                   return Column(
                     children: [
                       ListTile(
@@ -682,14 +704,13 @@ class _ChartPageContentState extends State<_ChartPageContent>
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => TagDetailPage(
+                              builder: (_) => TagDetailPage(
                                 tagName: tag,
-                                transactions: widget
-                                    .transactionViewModel.transactions
+                                transactions: widget.transactionViewModel
+                                    .transactions
                                     .where((t) =>
                                         t.tag == tag &&
-                                        t.type ==
-                                            widget.selectedTransactionType)
+                                        t.type == widget.selectedTransactionType)
                                     .toList(),
                                 initialFocusedMonth: widget.focusedDate,
                                 selectedTransactionType:
@@ -712,7 +733,7 @@ class _ChartPageContentState extends State<_ChartPageContent>
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            '$percentageText%',
+                            '$pText%',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -733,8 +754,8 @@ class _ChartPageContentState extends State<_ChartPageContent>
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward_ios,
-                                size: 16.0, color: Colors.grey),
+                            const Icon(Icons.chevron_right,
+                                size: 16, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -749,7 +770,6 @@ class _ChartPageContentState extends State<_ChartPageContent>
   }
 }
 
-// グラフ上ヒント（静止・タッチ非干渉・初回のみ）
 class _GraphSwipeHintOverlay extends StatelessWidget {
   const _GraphSwipeHintOverlay();
 
@@ -757,7 +777,7 @@ class _GraphSwipeHintOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: Padding(
-        padding: const EdgeInsets.only(top: 100.0),
+        padding: const EdgeInsets.only(top: 100.0), // ← 修正
         child: Center(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -786,4 +806,169 @@ class _GraphSwipeHintOverlay extends StatelessWidget {
   }
 }
 
+class _MonthYearSwitcherWrapper extends StatefulWidget {
+  const _MonthYearSwitcherWrapper({super.key});
 
+  @override
+  State<_MonthYearSwitcherWrapper> createState() =>
+      _MonthYearSwitcherWrapperState();
+}
+
+class _MonthYearSwitcherWrapperState
+    extends State<_MonthYearSwitcherWrapper> {
+  @override
+  Widget build(BuildContext context) {
+    final state = context.findAncestorStateOfType<_AnalyticsPageState>();
+    if (state == null) return const SizedBox.shrink();
+    return _MonthYearSwitcher(
+      viewType: state._viewType,
+      onToggle: () {
+        state.setState(() {
+          state._viewType =
+              state._viewType == _ViewType.month ? _ViewType.year : _ViewType.month;
+          state._focusedDate = DateTime.now();
+          state._pageController.jumpToPage(state._calculateInitialPage());
+        });
+      },
+    );
+  }
+}
+
+class _MonthYearSwitcher extends StatelessWidget {
+  final _ViewType viewType;
+  final VoidCallback onToggle;
+  const _MonthYearSwitcher({
+    required this.viewType,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final active = Colors.orange.shade700;
+    final inactive =
+        Theme.of(context).textTheme.titleLarge?.color ?? Colors.black87;
+
+    const double containerWidth = 84;
+    const double containerHeight = 40;
+    const double leftSlot = 20.0;
+    const double rightSlot = 40.0;
+    const double badgeSize = 38.0;
+
+    final bool isMonth = viewType == _ViewType.month;
+
+    final double monthTop = isMonth ? 0.0 : -6.0;
+    final double monthScale = isMonth ? 1.0 : 0.80;
+    final double monthOpacity = isMonth ? 1.0 : 0.55;
+
+    final double yearTop = isMonth ? -6.0 : 0.0;
+    final double yearScale = isMonth ? 0.80 : 1.0;
+    final double yearOpacity = isMonth ? 0.55 : 1.0;
+
+    final monthBadge = _AnimatedBadge(
+      key: const ValueKey('month'),
+      left: leftSlot,
+      top: monthTop,
+      label: '月',
+      isActive: isMonth,
+      activeColor: active,
+      inactiveColor: inactive,
+      scale: monthScale,
+      opacity: monthOpacity,
+      size: badgeSize,
+    );
+
+    final yearBadge = _AnimatedBadge(
+      key: const ValueKey('year'),
+      left: rightSlot,
+      top: yearTop,
+      label: '年',
+      isActive: !isMonth,
+      activeColor: active,
+      inactiveColor: inactive,
+      scale: yearScale,
+      opacity: yearOpacity,
+      size: badgeSize,
+    );
+
+    final children =
+        isMonth ? <Widget>[yearBadge, monthBadge] : <Widget>[monthBadge, yearBadge];
+
+    return InkWell(
+      onTap: onToggle,
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: containerWidth,
+        height: containerHeight,
+        child: Stack(clipBehavior: Clip.none, children: children),
+      ),
+    );
+  }
+}
+
+class _AnimatedBadge extends StatelessWidget {
+  final double left;
+  final double top;
+  final String label;
+  final bool isActive;
+  final Color activeColor;
+  final Color inactiveColor;
+  final double scale;
+  final double opacity;
+  final double size;
+
+  const _AnimatedBadge({
+    super.key,
+    required this.left,
+    required this.top,
+    required this.label,
+    required this.isActive,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.scale,
+    required this.opacity,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isActive ? activeColor : inactiveColor;
+
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeInOut,
+      left: left,
+      top: top,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeInOut,
+        opacity: opacity,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeInOut,
+          scale: scale,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(Icons.calendar_today_outlined, size: size - 8, color: color),
+                Positioned(
+                  bottom: 6,
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

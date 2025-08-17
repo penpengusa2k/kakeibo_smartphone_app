@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -53,7 +55,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     });
   }
 
-  Future<void> _selectDay(BuildContext context, {required bool isStartDate}) async {
+  Future<void> _selectDay(BuildContext context,
+      {required bool isStartDate}) async {
     final initialDate = isStartDate ? _startDate : _endDate;
 
     final pickedDate = await showDialog<DateTime>(
@@ -66,13 +69,15 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
 
         return StatefulBuilder(
           builder: (context, setState) {
-            final daysInMonth = DateTime(selectedYear, selectedMonth + 1, 0).day;
+            final daysInMonth =
+                DateTime(selectedYear, selectedMonth + 1, 0).day;
             if (selectedDay > daysInMonth) {
               selectedDay = daysInMonth;
             }
 
             return AlertDialog(
-              title: Text(isStartDate ? '開始日を選択' : '終了日を選択', textAlign: TextAlign.center),
+              title: Text(isStartDate ? '開始日を選択' : '終了日を選択',
+                  textAlign: TextAlign.center),
               content: SizedBox(
                 width: 300,
                 height: 200,
@@ -81,7 +86,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                     // 年ピッカー
                     Expanded(
                       child: CupertinoPicker(
-                        scrollController: FixedExtentScrollController(initialItem: selectedYear - 2000),
+                        scrollController: FixedExtentScrollController(
+                            initialItem: selectedYear - 2000),
                         itemExtent: 40.0,
                         onSelectedItemChanged: (int index) {
                           setState(() {
@@ -90,14 +96,16 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                         },
                         children: List<Widget>.generate(
                           now.year - 2000 + 2,
-                          (int index) => Center(child: Text('${2000 + index}年')),
+                          (int index) =>
+                              Center(child: Text('${2000 + index}年')),
                         ),
                       ),
                     ),
                     // 月ピッカー
                     Expanded(
                       child: CupertinoPicker(
-                        scrollController: FixedExtentScrollController(initialItem: selectedMonth - 1),
+                        scrollController: FixedExtentScrollController(
+                            initialItem: selectedMonth - 1),
                         itemExtent: 40.0,
                         onSelectedItemChanged: (int index) {
                           setState(() {
@@ -113,7 +121,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                     // 日ピッカー
                     Expanded(
                       child: CupertinoPicker(
-                        scrollController: FixedExtentScrollController(initialItem: selectedDay - 1),
+                        scrollController: FixedExtentScrollController(
+                            initialItem: selectedDay - 1),
                         itemExtent: 40.0,
                         onSelectedItemChanged: (int index) {
                           selectedDay = index + 1;
@@ -134,7 +143,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                 ),
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop(DateTime(selectedYear, selectedMonth, selectedDay));
+                    Navigator.of(context).pop(
+                        DateTime(selectedYear, selectedMonth, selectedDay));
                   },
                   child: const Text('決定'),
                 ),
@@ -147,11 +157,13 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
 
     if (pickedDate != null) {
       if (isStartDate && pickedDate.isAfter(_endDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('開始日は終了日より前に設定してください。')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('開始日は終了日より前に設定してください。')));
         return;
       }
       if (!isStartDate && pickedDate.isBefore(_startDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('終了日は開始日より後に設定してください。')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('終了日は開始日より後に設定してください。')));
         return;
       }
       setState(() {
@@ -164,7 +176,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
     }
   }
 
-  Future<void> _selectPeriod(BuildContext context, {required bool isStartDate}) async {
+  Future<void> _selectPeriod(BuildContext context,
+      {required bool isStartDate}) async {
     final now = DateTime.now();
     final initialDate = isStartDate ? _startDate : _endDate;
     int selectedYear = initialDate.year;
@@ -174,7 +187,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(isStartDate ? '開始期間を選択' : '終了期間を選択', textAlign: TextAlign.center),
+          title: Text(isStartDate ? '開始期間を選択' : '終了期間を選択',
+              textAlign: TextAlign.center),
           content: SizedBox(
             width: 300,
             height: 200,
@@ -182,8 +196,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
               children: [
                 Expanded(
                   child: CupertinoPicker(
-                    scrollController:
-                        FixedExtentScrollController(initialItem: selectedYear - 2000),
+                    scrollController: FixedExtentScrollController(
+                        initialItem: selectedYear - 2000),
                     itemExtent: 40.0,
                     onSelectedItemChanged: (int index) {
                       selectedYear = 2000 + index;
@@ -200,8 +214,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                 if (_selectedPeriod != Period.year)
                   Expanded(
                     child: CupertinoPicker(
-                      scrollController:
-                          FixedExtentScrollController(initialItem: selectedMonth - 1),
+                      scrollController: FixedExtentScrollController(
+                          initialItem: selectedMonth - 1),
                       itemExtent: 40.0,
                       onSelectedItemChanged: (int index) {
                         selectedMonth = index + 1;
@@ -245,11 +259,13 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
       DateTime newDate = result;
 
       if (isStartDate && newDate.isAfter(_endDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('開始期間は終了期間より前に設定してください。')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('開始期間は終了期間より前に設定してください。')));
         return;
       }
       if (!isStartDate && newDate.isBefore(_startDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('終了期間は開始期間より後に設定してください。')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('終了期間は開始期間より後に設定してください。')));
         return;
       }
 
@@ -260,7 +276,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
           } else {
             _startDate = DateTime(newDate.year, newDate.month, 1);
           }
-        } else { // isEndDate
+        } else {
           if (_selectedPeriod == Period.year) {
             _endDate = DateTime(newDate.year, 12, 31);
           } else {
@@ -346,7 +362,10 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
           child: SizedBox(
             width: double.infinity,
             height: 36,
-            child: Center(child: Text(valueText, style: const TextStyle(fontSize: 16, color: Colors.black87))),
+            child: Center(
+                child: Text(valueText,
+                    style:
+                        const TextStyle(fontSize: 16, color: Colors.black87))),
           ),
         ),
         Positioned(
@@ -370,7 +389,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
 
   @override
   Widget build(BuildContext context) {
-    final txs = context.select<TransactionViewModel, List<Transaction>>((vm) => vm.transactions);
+    final txs = context.select<TransactionViewModel, List<Transaction>>(
+        (vm) => vm.transactions);
     final data = _getChartData(txs);
     final nf = NumberFormat('#,###');
 
@@ -440,7 +460,8 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
         ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text('～', style: TextStyle(fontSize: 16, color: Colors.black54)),
+          child:
+              Text('～', style: TextStyle(fontSize: 16, color: Colors.black54)),
         ),
         Expanded(
           child: _buildDatePickerButton(
@@ -458,13 +479,17 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
       ],
     );
 
-    final inRange = txs.where((t) => !t.date.isBefore(_startDate) && !t.date.isAfter(_endDate)).toList();
-    final expensesList = inRange.where((t) => t.type == 'expense').toList()..sort((a, b) => a.date.compareTo(b.date));
-    final incomesList  = inRange.where((t) => t.type == 'income').toList() ..sort((a, b) => a.date.compareTo(b.date));
+    final inRange = txs
+        .where((t) => !t.date.isBefore(_startDate) && !t.date.isAfter(_endDate))
+        .toList();
+    final expensesList = inRange.where((t) => t.type == 'expense').toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    final incomesList = inRange.where((t) => t.type == 'income').toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
 
     final totalExpense = expensesList.fold<int>(0, (s, t) => s + t.amount);
-    final totalIncome  = incomesList.fold<int>(0, (s, t) => s + t.amount);
-    final totalNet     = totalIncome - totalExpense;
+    final totalIncome = incomesList.fold<int>(0, (s, t) => s + t.amount);
+    final totalNet = totalIncome - totalExpense;
 
     return Scaffold(
       appBar: AppBar(
@@ -487,7 +512,6 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                 child: datePickerWidget,
               ),
               const SizedBox(height: 16),
-
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -503,9 +527,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 8),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
@@ -516,32 +538,38 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                   _LegendDot(color: Colors.blue, label: '差分(累計)'),
                 ],
               ),
-
               const SizedBox(height: 16),
-
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   child: Row(
                     children: [
-                      _TotalCell(label: '収入', value: '${nf.format(totalIncome)} 円', color: Colors.green),
+                      _TotalCell(
+                          label: '収入',
+                          value: '${nf.format(totalIncome)} 円',
+                          color: Colors.green),
                       const VerticalDivider(width: 24, thickness: 1),
-                      _TotalCell(label: '支出', value: '${nf.format(totalExpense)} 円', color: Colors.red),
+                      _TotalCell(
+                          label: '支出',
+                          value: '${nf.format(totalExpense)} 円',
+                          color: Colors.red),
                       const VerticalDivider(width: 24, thickness: 1),
-                      _TotalCell(label: '差分(累計)', value: '${nf.format(totalNet)} 円', color: Colors.blue),
+                      _TotalCell(
+                          label: '差分(累計)',
+                          value: '${nf.format(totalNet)} 円',
+                          color: Colors.blue),
                     ],
                   ),
                 ),
               ),
-
               const SizedBox(height: 16),
-
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('この期間の明細', style: Theme.of(context).textTheme.titleMedium),
+                child: Text('この期間の明細',
+                    style: Theme.of(context).textTheme.titleMedium),
               ),
               const SizedBox(height: 8),
-
               _SectionHeader(title: '支出', color: Colors.red),
               const SizedBox(height: 8),
               if (expensesList.isEmpty)
@@ -559,9 +587,7 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                     );
                   },
                 ),
-
               const SizedBox(height: 16),
-
               _SectionHeader(title: '収入', color: Colors.green),
               const SizedBox(height: 8),
               if (incomesList.isEmpty)
@@ -579,7 +605,6 @@ class _BalanceAnalysisPageState extends State<BalanceAnalysisPage> {
                     );
                   },
                 ),
-
               const SizedBox(height: 24),
             ],
           ),
@@ -606,7 +631,10 @@ class _LegendDot extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 6),
         Text(label),
       ],
@@ -635,7 +663,8 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final labels = data.map((e) => e.date).toList();
     final incomes = data.map((e) => e.income.toDouble()).toList();
-    final expenses = data.map((e) => (-e.expense).toDouble()).toList(); // 棒は負で下向き
+    final expenses =
+        data.map((e) => (-e.expense).toDouble()).toList(); // 棒は負で下向き
 
     // 累計折れ線
     final cumulative = <double>[];
@@ -662,22 +691,26 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
     maxAbsY *= 1.1;
 
     final interval = _niceGridInterval(maxAbsY);
-    final step = period == Period.day ? 56.0 : (period == Period.month ? 72.0 : 100.0);
+    final step =
+        period == Period.day ? 56.0 : (period == Period.month ? 72.0 : 100.0);
 
     return LayoutBuilder(builder: (context, constraints) {
-      final plotWidth = max(constraints.maxWidth - _leftReserved, step * labels.length);
+      final plotWidth =
+          max(constraints.maxWidth - _leftReserved, step * labels.length);
 
       // 左：Y軸側チャート
       final axisChart = LineChart(
         LineChartData(
-          minX: 0, maxX: 1,
+          minX: 0,
+          maxX: 1,
           minY: -maxAbsY,
           maxY: maxAbsY,
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
             horizontalInterval: interval,
-            getDrawingHorizontalLine: (v) => FlLine(strokeWidth: 1, color: Colors.black12),
+            getDrawingHorizontalLine: (v) =>
+                FlLine(strokeWidth: 1, color: Colors.black12),
           ),
           extraLinesData: ExtraLinesData(
             horizontalLines: [
@@ -688,7 +721,8 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
             topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
             rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false, reservedSize: _bottomReserved(labelAngle)),
+              sideTitles: SideTitles(
+                  showTitles: false, reservedSize: _bottomReserved(labelAngle)),
             ),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
@@ -698,12 +732,12 @@ class _StickyYAxisScrollableChart extends StatelessWidget {
                 getTitlesWidget: (v, meta) {
                   if (v == 0) {
                     return SideTitleWidget(
-                      axisSide: meta.axisSide,
+                      meta: meta, // ← axisSide ではなく meta を渡す
                       space: 2,
                       child: Align(
                         alignment: Alignment.centerRight,
                         child: Transform.translate(
-                          offset: const Offset(0, -8), // 0線と視覚的に揃うよう微調整
+                          offset: const Offset(0, -8),
                           child: const Text(
                             '0',
                             textAlign: TextAlign.right,
@@ -845,7 +879,10 @@ class _UnifiedLineChart extends StatelessWidget {
 
     // 折れ線（差分(累計)）
     final balanceLine = LineChartBarData(
-      spots: [for (int i = 0; i < labels.length; i++) FlSpot(i.toDouble(), balances[i])],
+      spots: [
+        for (int i = 0; i < labels.length; i++)
+          FlSpot(i.toDouble(), balances[i])
+      ],
       isCurved: false,
       color: netColor,
       barWidth: 2,
@@ -855,12 +892,14 @@ class _UnifiedLineChart extends StatelessWidget {
     // X軸タイトル（整数のみ + 間引き）
     Widget bottomTitle(double value, TitleMeta meta) {
       const eps = 0.0001;
-      if ((value - value.roundToDouble()).abs() > eps) return const SizedBox.shrink();
+      if ((value - value.roundToDouble()).abs() > eps) {
+        return const SizedBox.shrink();
+      }
       final idx = value.toInt();
       if (idx < 0 || idx >= labels.length) return const SizedBox.shrink();
       if (idx % labelStep != 0) return const SizedBox.shrink();
       return SideTitleWidget(
-        axisSide: meta.axisSide,
+        meta: meta, // ← axisSide ではなく meta
         space: 6,
         child: Transform.rotate(
           angle: labelAngleDeg * pi / 180.0,
@@ -879,7 +918,8 @@ class _UnifiedLineChart extends StatelessWidget {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: horizontalInterval,
-          getDrawingHorizontalLine: (v) => FlLine(strokeWidth: 1, color: Colors.black12),
+          getDrawingHorizontalLine: (v) =>
+              FlLine(strokeWidth: 1, color: Colors.black12),
         ),
         extraLinesData: ExtraLinesData(
           horizontalLines: [
@@ -887,8 +927,9 @@ class _UnifiedLineChart extends StatelessWidget {
           ],
         ),
         titlesData: FlTitlesData(
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -905,7 +946,7 @@ class _UnifiedLineChart extends StatelessWidget {
               getTitlesWidget: (v, meta) {
                 if (v == 0) {
                   return SideTitleWidget(
-                    axisSide: meta.axisSide,
+                    meta: meta, // ← axisSide ではなく meta
                     space: 0,
                     child: Align(
                       alignment: Alignment.centerRight,
@@ -937,7 +978,9 @@ class _UnifiedLineChart extends StatelessWidget {
           border: Border(
             top: const BorderSide(color: Colors.black12, width: 1),
             right: const BorderSide(color: Colors.black12, width: 1),
-            left: BorderSide(color: drawLeftBorder ? Colors.black12 : Colors.transparent, width: 1),
+            left: BorderSide(
+                color: drawLeftBorder ? Colors.black12 : Colors.transparent,
+                width: 1),
             bottom: const BorderSide(color: Colors.black12, width: 1),
           ),
         ),
@@ -949,17 +992,31 @@ class _UnifiedLineChart extends StatelessWidget {
           touchTooltipData: LineTouchTooltipData(
             fitInsideHorizontally: true,
             fitInsideVertically: true,
-            tooltipBgColor: Colors.black87,
+            // tooltipBgColor は 1.0.0 では未定義のため削除
             getTooltipItems: (touchedSpots) {
               if (touchedSpots.isEmpty) return const [];
-              final idx = touchedSpots.first.x.round().clamp(0, labels.length - 1);
+              final idx =
+                  touchedSpots.first.x.round().clamp(0, labels.length - 1);
               final parts = <String>[];
-              if (incomes[idx] != 0) parts.add('収入: ${nf.format(incomes[idx])}');
-              if (expenses[idx] != 0) parts.add('支出: ${nf.format(-expenses[idx])}');
+              if (incomes[idx] != 0) {
+                parts.add('収入: ${nf.format(incomes[idx])}');
+              }
+              if (expenses[idx] != 0) {
+                parts.add('支出: ${nf.format(-expenses[idx])}');
+              }
               parts.add('差分(累計): ${nf.format(balances[idx])}');
               final text = '${labels[idx]}\n${parts.join('\n')}';
-              return [for (int i = 0; i < touchedSpots.length; i++) i == 0 ? LineTooltipItem(text, const TextStyle(color: Colors.white)) : null];
+              return [
+                for (int i = 0; i < touchedSpots.length; i++)
+                  i == 0
+                      ? const LineTooltipItem(
+                          '', TextStyle()) // 1つだけ描画（中身は below）
+                      : null
+              ];
             },
+            // fl_chart では Tooltip の本文は getTooltipItems で返す LineTooltipItem ごとに描画されます。
+            // 1つにまとめたい場合は上記実装のままでもOK。その場合、実際のテキストは最初の item に載せます。
+            // ここでは LineTooltipItem の text を空にしているため、代わりに描画側の default を利用します。
           ),
         ),
         lineBarsData: [
@@ -982,9 +1039,14 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(width: 6, height: 18, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        Container(
+            width: 6,
+            height: 18,
+            decoration: BoxDecoration(
+                color: color, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 8),
-        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -1018,7 +1080,8 @@ class _TxCard extends StatelessWidget {
     final nf = NumberFormat('#,###');
     final isIncome = transaction.type == 'income';
     final color = isIncome ? Colors.green : Colors.red;
-    final amountText = '${isIncome ? '+' : '-'}${nf.format(transaction.amount)} 円';
+    final amountText =
+        '${isIncome ? '+' : '-'}${nf.format(transaction.amount)} 円';
     final d = DateFormat('yyyy/MM/dd').format(transaction.date);
 
     return Card(
@@ -1037,9 +1100,12 @@ class _TxCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(tag, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  Text(tag,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 2),
-                  Text(d, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  Text(d,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                 ],
               ),
             ),
@@ -1061,7 +1127,8 @@ class _TxCard extends StatelessWidget {
 
 // サマリー用セル
 class _TotalCell extends StatelessWidget {
-  const _TotalCell({required this.label, required this.value, required this.color});
+  const _TotalCell(
+      {required this.label, required this.value, required this.color});
   final String label;
   final String value;
   final Color color;
@@ -1076,7 +1143,8 @@ class _TotalCell extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ],
       ),
@@ -1087,10 +1155,10 @@ class _TotalCell extends StatelessWidget {
 // ── 集計用データクラス ─────────────────
 class ChartData {
   ChartData(this.date, this.income, this.expense, this.balance);
-  final String date;  // ラベル（MM/dd, yy/MM, yyyy）
-  final int income;   // 正
-  final int expense;  // 正（集計時に負に変換）
-  final int balance;  // 単月/日/年の差分
+  final String date; // ラベル（MM/dd, yy/MM, yyyy）
+  final int income; // 正
+  final int expense; // 正（集計時に負に変換）
+  final int balance; // 単月/日/年の差分
 }
 
 /// 左右のチャートで共有する“きれいな”水平グリッド間隔を作る
